@@ -20,6 +20,13 @@ class MyApp extends StatelessWidget {
   }
 }
 
+class Event {
+  final String title;
+  final String description;
+
+  Event(this.title, this.description);
+}
+
 class CalendarGrid extends StatefulWidget {
   const CalendarGrid({Key? key}) : super(key: key);
 
@@ -28,20 +35,80 @@ class CalendarGrid extends StatefulWidget {
 }
 
 class _CalendarGridState extends State<CalendarGrid> {
-  final DateTime _selectedDate = DateTime.now();
-
-  int _selectedIndex = 0;
+  DateTime _selectedDate = DateTime.now();
+  late int _selectedIndex;
   late int indexOfFirstDayMonth;
+  Map<DateTime, List<Event>> _events = {};
 
   @override
   void initState() {
     super.initState();
+    _initializeSelectedIndex();
+  }
+
+  void _initializeSelectedIndex() {
     indexOfFirstDayMonth = getIndexOfFirstDayInMonth(_selectedDate);
+    _selectedIndex = indexOfFirstDayMonth + int.parse(DateFormat('d').format(_selectedDate)) - 1;
+  }
+
+  void _goToPreviousMonth() {
     setState(() {
-      _selectedIndex = indexOfFirstDayMonth +
-          int.parse(DateFormat('d').format(DateTime.now())) -
-          1;
+      _selectedDate = DateTime(_selectedDate.year, _selectedDate.month - 1, 1);
+      _initializeSelectedIndex();
     });
+  }
+
+  void _goToNextMonth() {
+    setState(() {
+      _selectedDate = DateTime(_selectedDate.year, _selectedDate.month + 1, 1);
+      _initializeSelectedIndex();
+    });
+  }
+
+  void _addEvent(DateTime date) {
+    TextEditingController titleController = TextEditingController();
+    TextEditingController descriptionController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Add Event'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(labelText: 'Title'),
+              ),
+              TextField(
+                controller: descriptionController,
+                decoration: InputDecoration(labelText: 'Description'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Add'),
+              onPressed: () {
+                setState(() {
+                  _events.putIfAbsent(date, () => []).add(
+                    Event(titleController.text, descriptionController.text),
+                  );
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -51,17 +118,20 @@ class _CalendarGridState extends State<CalendarGrid> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         shadowColor: Colors.transparent,
-        leading: const Icon(
-          Icons.arrow_back,
-          color: Colors.black,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Colors.black,
+          ),
+          onPressed: _goToPreviousMonth,
         ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.all(12),
-            child: Icon(
+        actions: [
+          IconButton(
+            icon: const Icon(
               Icons.arrow_forward,
               color: Colors.black,
             ),
+            onPressed: _goToNextMonth,
           )
         ],
         title: Column(
@@ -134,38 +204,84 @@ class _CalendarGridState extends State<CalendarGrid> {
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 7,
               ),
-              itemCount:
-                  listOfDatesInMonth(_selectedDate).length + indexOfFirstDayMonth,
+              itemCount: listOfDatesInMonth(_selectedDate).length + indexOfFirstDayMonth,
               itemBuilder: (BuildContext context, int index) {
+                DateTime currentDate = DateTime(
+                  _selectedDate.year,
+                  _selectedDate.month,
+                  index + 1 - indexOfFirstDayMonth,
+                );
+                List<Event>? events = _events[currentDate];
+
                 return Padding(
                   padding: const EdgeInsets.all(10),
                   child: GestureDetector(
-                    onTap: () => index >= indexOfFirstDayMonth
-                        ? setState(() {
-                            _selectedIndex = index;
-                          })
-                        : null,
-                    child: Container(
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: index == _selectedIndex
-                            ? Color(0xFFFD00F0F)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                      child: index < indexOfFirstDayMonth
-                          ? const Text("")
-                          : Text(
-                              '${index + 1 - indexOfFirstDayMonth}',
-                              style: TextStyle(
-                                color: index == _selectedIndex
-                                    ? Colors.white
-                                    : index % 7 == 6
-                                        ? Colors.redAccent
-                                        : Colors.black,
-                                fontSize: 17,
-                              ),
-                            ),
+                    onTap: () {
+                      if (index >= indexOfFirstDayMonth) {
+                        setState(() {
+                          _selectedIndex = index;
+                          _addEvent(currentDate);
+                        });
+                      }
+                    },
+                    child: Stack(
+                      children: [
+                        Container(
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: index == _selectedIndex
+                                ? const Color(0xFFFD00F0F)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              index < indexOfFirstDayMonth
+                                  ? const Text("")
+                                  : Text(
+                                      '${index + 1 - indexOfFirstDayMonth}',
+                                      style: TextStyle(
+                                        color: index == _selectedIndex
+                                            ? Colors.white
+                                            : index % 7 == 6
+                                                ? Colors.redAccent
+                                                : Colors.black,
+                                        fontSize: 17,
+                                      ),
+                                    ),
+                            ],
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: events != null && events.isNotEmpty
+                              ? Container(
+                                  color: Colors.black.withOpacity(0.7),
+                                  padding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: events.map((event) {
+                                      return Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            event.title,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }).toList(),
+                                  ),
+                                )
+                              : SizedBox.shrink(),
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -182,13 +298,12 @@ class _CalendarGridState extends State<CalendarGrid> {
                   width: MediaQuery.of(context).size.width,
                   padding: const EdgeInsets.only(bottom: 20, top: 10),
                   child: Image.asset(
-                    'assets/images/calendar-icon.jpg',
+                    'web/asset/images/calendar-icon.png',
                     fit: BoxFit.contain,
                   ),
                 ),
                 const Text("No events today",
-                    style:
-                        TextStyle(fontSize: 20, fontWeight: FontWeight.w600))
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600))
               ],
             ),
           ),
@@ -199,8 +314,7 @@ class _CalendarGridState extends State<CalendarGrid> {
 }
 
 List<int> listOfDatesInMonth(DateTime currentDate) {
-  var selectedMonthFirstDay =
-      DateTime(currentDate.year, currentDate.month, currentDate.day);
+  var selectedMonthFirstDay = DateTime(currentDate.year, currentDate.month, 1);
   var nextMonthFirstDay = DateTime(selectedMonthFirstDay.year,
       selectedMonthFirstDay.month + 1, selectedMonthFirstDay.day);
   var totalDays = nextMonthFirstDay.difference(selectedMonthFirstDay).inDays;
@@ -210,8 +324,7 @@ List<int> listOfDatesInMonth(DateTime currentDate) {
 }
 
 int getIndexOfFirstDayInMonth(DateTime currentDate) {
-  var selectedMonthFirstDay =
-      DateTime(currentDate.year, currentDate.month, currentDate.day);
+  var selectedMonthFirstDay = DateTime(currentDate.year, currentDate.month, 1);
   var day = DateFormat('EEE').format(selectedMonthFirstDay).toUpperCase();
 
   return daysOfWeek.indexOf(day) - 1;
