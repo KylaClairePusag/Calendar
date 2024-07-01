@@ -39,6 +39,8 @@ class _CalendarGridState extends State<CalendarGrid> {
   late int _selectedIndex;
   late int indexOfFirstDayMonth;
   Map<DateTime, List<Event>> _events = {};
+  String? _selectedEventTitle;
+  String? _selectedEventDescription;
 
   @override
   void initState() {
@@ -65,50 +67,14 @@ class _CalendarGridState extends State<CalendarGrid> {
     });
   }
 
-  void _addEvent(DateTime date) {
-    TextEditingController titleController = TextEditingController();
-    TextEditingController descriptionController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Add Event'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: InputDecoration(labelText: 'Title'),
-              ),
-              TextField(
-                controller: descriptionController,
-                decoration: InputDecoration(labelText: 'Description'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: Text('Add'),
-              onPressed: () {
-                setState(() {
-                  _events.putIfAbsent(date, () => []).add(
-                    Event(titleController.text, descriptionController.text),
-                  );
-                });
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
+  void _addEvent(DateTime date, String title, String description) {
+    setState(() {
+      _events.putIfAbsent(date, () => []).add(
+        Event(title, description),
+      );
+      _selectedEventTitle = title;
+      _selectedEventDescription = description;
+    });
   }
 
   @override
@@ -181,129 +147,201 @@ class _CalendarGridState extends State<CalendarGrid> {
               },
             ),
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  spreadRadius: 0.1,
-                  blurRadius: 7,
-                  offset: const Offset(0, 7.75),
-                ),
-              ],
-            ),
-            child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              padding: EdgeInsets.zero,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 7,
-              ),
-              itemCount: listOfDatesInMonth(_selectedDate).length + indexOfFirstDayMonth,
-              itemBuilder: (BuildContext context, int index) {
-                DateTime currentDate = DateTime(
-                  _selectedDate.year,
-                  _selectedDate.month,
-                  index + 1 - indexOfFirstDayMonth,
-                );
-                List<Event>? events = _events[currentDate];
+          Expanded(
+            child: Stack(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        spreadRadius: 0.1,
+                        blurRadius: 7,
+                        offset: const Offset(0, 7.75),
+                      ),
+                    ],
+                  ),
+                  child: GridView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 7,
+                    ),
+                    itemCount: listOfDatesInMonth(_selectedDate).length + indexOfFirstDayMonth,
+                    itemBuilder: (BuildContext context, int index) {
+                      DateTime currentDate = DateTime(
+                        _selectedDate.year,
+                        _selectedDate.month,
+                        index + 1 - indexOfFirstDayMonth,
+                      );
+                      List<Event>? events = _events[currentDate];
 
-                return Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: GestureDetector(
-                    onTap: () {
-                      if (index >= indexOfFirstDayMonth) {
-                        setState(() {
-                          _selectedIndex = index;
-                          _addEvent(currentDate);
-                        });
-                      }
-                    },
-                    child: Stack(
-                      children: [
-                        Container(
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: index == _selectedIndex
-                                ? const Color(0xFFFD00F0F)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              index < indexOfFirstDayMonth
-                                  ? const Text("")
-                                  : Text(
-                                      '${index + 1 - indexOfFirstDayMonth}',
-                                      style: TextStyle(
-                                        color: index == _selectedIndex
-                                            ? Colors.white
-                                            : index % 7 == 6
-                                                ? Colors.redAccent
-                                                : Colors.black,
-                                        fontSize: 17,
+                      return Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Stack(
+                          children: [
+                            Container(
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: index == _selectedIndex
+                                    ? const Color(0xFFFD00F0F)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  index < indexOfFirstDayMonth
+                                      ? const Text("")
+                                      : Text(
+                                          '${index + 1 - indexOfFirstDayMonth}',
+                                          style: TextStyle(
+                                            color: index == _selectedIndex
+                                                ? Colors.white
+                                                : index % 7 == 6
+                                                    ? Colors.redAccent
+                                                    : Colors.black,
+                                            fontSize: 17,
+                                          ),
+                                        ),
+                                ],
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              child: events != null && events.isNotEmpty
+                                  ? Container(
+                                      color: Colors.black.withOpacity(0.7),
+                                      padding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: events.map((event) {
+                                          return Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                event.title,
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        }).toList(),
                                       ),
-                                    ),
+                                    )
+                                  : SizedBox.shrink(),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Positioned(
+                  bottom: 20,
+                  left: 20,
+                  right: 20,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'web/asset/images/calendar-icon.png',
+                        fit: BoxFit.contain,
+                        width: MediaQuery.of(context).size.width,
+                      ),
+                      const SizedBox(height: 10),
+                      if (_selectedEventTitle != null && _selectedEventDescription != null)
+                        Container(
+                          width: MediaQuery.of(context).size.width,
+                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                          color: Colors.black.withOpacity(0.7),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _selectedEventTitle!,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _selectedEventDescription!,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                        Positioned(
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          child: events != null && events.isNotEmpty
-                              ? Container(
-                                  color: Colors.black.withOpacity(0.7),
-                                  padding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: events.map((event) {
-                                      return Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            event.title,
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 10,
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    }).toList(),
+                      ElevatedButton(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              TextEditingController titleController = TextEditingController();
+                              TextEditingController descriptionController = TextEditingController();
+
+                              return AlertDialog(
+                                title: Text('Add Event'),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TextField(
+                                      controller: titleController,
+                                      decoration: InputDecoration(labelText: 'Title'),
+                                    ),
+                                    TextField(
+                                      controller: descriptionController,
+                                      decoration: InputDecoration(labelText: 'Description'),
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    child: Text('Cancel'),
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
                                   ),
-                                )
-                              : SizedBox.shrink(),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(
-            height: 5,
-          ),
-          Expanded(
-            child: Column(
-              children: [
-                Container(
-                  width: MediaQuery.of(context).size.width,
-                  padding: const EdgeInsets.only(bottom: 20, top: 10),
-                  child: Image.asset(
-                    'web/asset/images/calendar-icon.png',
-                    fit: BoxFit.contain,
+                                  TextButton(
+                                    child: Text('Add'),
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      _addEvent(
+                                        DateTime(
+                                          _selectedDate.year,
+                                          _selectedDate.month,
+                                          _selectedIndex + 1 - indexOfFirstDayMonth,
+                                        ),
+                                        titleController.text,
+                                        descriptionController.text,
+                                      );
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                        child: const Text('Add Event'),
+                      ),
+                    ],
                   ),
                 ),
-                const Text("No events today",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600))
               ],
             ),
           ),
@@ -315,8 +353,11 @@ class _CalendarGridState extends State<CalendarGrid> {
 
 List<int> listOfDatesInMonth(DateTime currentDate) {
   var selectedMonthFirstDay = DateTime(currentDate.year, currentDate.month, 1);
-  var nextMonthFirstDay = DateTime(selectedMonthFirstDay.year,
-      selectedMonthFirstDay.month + 1, selectedMonthFirstDay.day);
+  var nextMonthFirstDay = DateTime(
+    selectedMonthFirstDay.year,
+    selectedMonthFirstDay.month + 1,
+    selectedMonthFirstDay.day,
+  );
   var totalDays = nextMonthFirstDay.difference(selectedMonthFirstDay).inDays;
 
   var listOfDates = List<int>.generate(totalDays, (i) => i + 1);
