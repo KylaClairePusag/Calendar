@@ -5,6 +5,11 @@ void main() {
   runApp(const MyApp());
 }
 
+enum AppTheme {
+  Light,
+  Dark,
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
@@ -12,19 +17,35 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Calendar App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: _buildThemeData(AppTheme.Light), // Set initial light theme
+      darkTheme: _buildThemeData(AppTheme.Dark), // Set dark theme
+      debugShowCheckedModeBanner: false, // Remove debug banner
       home: const CalendarGrid(),
     );
+  }
+
+  ThemeData _buildThemeData(AppTheme themeMode) {
+    switch (themeMode) {
+      case AppTheme.Light:
+        return ThemeData(
+          primarySwatch: Colors.red,
+          brightness: Brightness.light,
+        );
+      case AppTheme.Dark:
+        return ThemeData(
+          primarySwatch: Colors.red,
+          brightness: Brightness.dark,
+        );
+    }
   }
 }
 
 class Event {
-  final String title;
-  final String description;
+  String title;
+  String description;
+  String status;
 
-  Event(this.title, this.description);
+  Event(this.title, this.description, this.status);
 }
 
 class CalendarGrid extends StatefulWidget {
@@ -36,11 +57,14 @@ class CalendarGrid extends StatefulWidget {
 
 class _CalendarGridState extends State<CalendarGrid> {
   DateTime _selectedDate = DateTime.now();
+  DateTime? _highlightedDate;
   late int _selectedIndex;
   late int indexOfFirstDayMonth;
   Map<DateTime, List<Event>> _events = {};
-  String? _selectedEventTitle;
-  String? _selectedEventDescription;
+  List<Event> _selectedDateEvents = [];
+  String userName = "Dianne Kristel Castillo"; // User name
+  String userEmail = "dayan@gmail.com"; // User email
+  AppTheme _currentTheme = AppTheme.Light; // Track current theme
 
   @override
   void initState() {
@@ -67,13 +91,348 @@ class _CalendarGridState extends State<CalendarGrid> {
     });
   }
 
-  void _addEvent(DateTime date, String title, String description) {
+  void _addEvent() {
+    if (_highlightedDate == null) return;
+
+    TextEditingController titleController = TextEditingController();
+    TextEditingController descriptionController = TextEditingController();
+    String status = 'Free';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Add Event'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(labelText: 'Title'),
+              ),
+              TextField(
+                controller: descriptionController,
+                decoration: InputDecoration(labelText: 'Description'),
+              ),
+              DropdownButtonFormField<String>(
+                value: status,
+                decoration: InputDecoration(labelText: 'Status'),
+                items: ['Free', 'Busy'].map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  setState(() {
+                    status = newValue!;
+                  });
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Add'),
+              onPressed: () {
+                setState(() {
+                  _events.putIfAbsent(
+                    _highlightedDate!,
+                    () => [],
+                  ).add(
+                    Event(
+                      titleController.text,
+                      descriptionController.text,
+                      status,
+                    ),
+                  );
+                });
+                Navigator.of(context).pop();
+                _updateSelectedDateEvents();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showDiscardDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Discard this event?'),
+          actions: [
+            TextButton(
+              child: Text('Keep Editing'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Discard'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _editEvent(Event event) {
+    TextEditingController titleController =
+        TextEditingController(text: event.title);
+    TextEditingController descriptionController =
+        TextEditingController(text: event.description);
+    String status = event.status;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Edit Event'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(labelText: 'Title'),
+              ),
+              TextField(
+                controller: descriptionController,
+                decoration: InputDecoration(labelText: 'Description'),
+              ),
+              DropdownButtonFormField<String>(
+                value: status,
+                decoration: InputDecoration(labelText: 'Status'),
+                items: ['Free', 'Busy'].map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  setState(() {
+                    status = newValue!;
+                  });
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Save'),
+              onPressed: () {
+                setState(() {
+                  event.title = titleController.text;
+                  event.description = descriptionController.text;
+                  event.status = status;
+                });
+                Navigator.of(context).pop();
+                _updateSelectedDateEvents();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _onDateTap(DateTime date) {
     setState(() {
-      _events.putIfAbsent(date, () => []).add(
-        Event(title, description),
-      );
-      _selectedEventTitle = title;
-      _selectedEventDescription = description;
+      _highlightedDate = date;
+      _selectedIndex = indexOfFirstDayMonth + date.day - 1;
+      _updateSelectedDateEvents();
+    });
+  }
+
+  void _updateSelectedDateEvents() {
+    _selectedDateEvents = _events[_highlightedDate] ?? [];
+  }
+
+  void _editProfile() {
+    TextEditingController nameController = TextEditingController(text: userName);
+    TextEditingController emailController = TextEditingController(text: userEmail);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Edit Profile'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(labelText: 'Name'),
+              ),
+              TextField(
+                controller: emailController,
+                decoration: InputDecoration(labelText: 'Email'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Save'),
+              onPressed: () {
+                setState(() {
+                  userName = nameController.text;
+                  userEmail = emailController.text;
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _openSettings() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Settings'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.palette),
+                title: Text('Theme'),
+                onTap: _showThemeDialog, // Open theme selection dialog
+              ),
+              ListTile(
+                leading: Icon(Icons.notifications),
+                title: Text('Notifications'),
+                onTap: () {
+                  // Handle notification settings
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Close'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _openHelpSupport() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Help & Support'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Contact us at primescheduler@help.com'),
+              Text('Visit our PrimeScheduler site for common questions.'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Close'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _openAbout() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('About'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Prime Scheduler App'),
+              Text('Version 1.0.0'),
+              Text('Developed by Group 9'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Close'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showThemeDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Select Theme'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text('Light Theme'),
+                onTap: () {
+                  _setTheme(AppTheme.Light);
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                title: Text('Dark Theme'),
+                onTap: () {
+                  _setTheme(AppTheme.Dark);
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _setTheme(AppTheme themeMode) {
+    setState(() {
+      _currentTheme = themeMode;
     });
   }
 
@@ -82,43 +441,38 @@ class _CalendarGridState extends State<CalendarGrid> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.red[200],
         shadowColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Colors.black,
-          ),
-          onPressed: _goToPreviousMonth,
+        leading: Builder(
+          builder: (BuildContext context) {
+            return IconButton(
+              icon: const Icon(Icons.menu, color: Colors.black),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+              tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+            );
+          },
         ),
         actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.arrow_back,
+              color: Colors.black,
+            ),
+            onPressed: _goToPreviousMonth,
+          ),
           IconButton(
             icon: const Icon(
               Icons.arrow_forward,
               color: Colors.black,
             ),
             onPressed: _goToNextMonth,
-          )
+          ),
         ],
-        title: Column(
-          children: [
-            const Text(
-              "Calendar",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
-                color: Colors.black,
-              ),
-            ),
-            Text(
-              DateFormat('MMMM yyyy').format(_selectedDate),
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
-                color: Colors.grey,
-              ),
-            )
-          ],
+        title: Text(
+          DateFormat.yMMMM().format(_selectedDate),
+          style: TextStyle(color: Colors.black),
         ),
       ),
       body: Column(
@@ -147,236 +501,244 @@ class _CalendarGridState extends State<CalendarGrid> {
               },
             ),
           ),
-          Expanded(
-            child: Stack(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(20),
-                      bottomRight: Radius.circular(20),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        spreadRadius: 0.1,
-                        blurRadius: 7,
-                        offset: const Offset(0, 7.75),
-                      ),
-                    ],
-                  ),
-                  child: GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    shrinkWrap: true,
-                    padding: EdgeInsets.zero,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 7,
-                    ),
-                    itemCount: listOfDatesInMonth(_selectedDate).length + indexOfFirstDayMonth,
-                    itemBuilder: (BuildContext context, int index) {
-                      DateTime currentDate = DateTime(
-                        _selectedDate.year,
-                        _selectedDate.month,
-                        index + 1 - indexOfFirstDayMonth,
-                      );
-                      List<Event>? events = _events[currentDate];
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  spreadRadius: 0.1,
+                  blurRadius: 7,
+                  offset: const Offset(0, 7.75),
+                ),
+              ],
+            ),
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 7,
+                childAspectRatio: 1.0, // Adjust the aspect ratio to control the size
+              ),
+              itemCount: listOfDatesInMonth(_selectedDate).length + indexOfFirstDayMonth,
+              itemBuilder: (BuildContext context, int index) {
+                DateTime currentDate = DateTime(
+                  _selectedDate.year,
+                  _selectedDate.month,
+                  index + 1 - indexOfFirstDayMonth,
+                );
+                List<Event>? events = _events[currentDate];
 
-                      return Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Stack(
-                          children: [
-                            Container(
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: index == _selectedIndex
-                                    ? const Color(0xFFFD00F0F)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  index < indexOfFirstDayMonth
-                                      ? const Text("")
-                                      : Text(
-                                          '${index + 1 - indexOfFirstDayMonth}',
-                                          style: TextStyle(
-                                            color: index == _selectedIndex
-                                                ? Colors.white
-                                                : index % 7 == 6
-                                                    ? Colors.redAccent
-                                                    : Colors.black,
-                                            fontSize: 17,
-                                          ),
-                                        ),
-                                ],
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              left: 0,
-                              right: 0,
-                              child: events != null && events.isNotEmpty
-                                  ? Container(
-                                      color: Colors.black.withOpacity(0.7),
-                                      padding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: events.map((event) {
-                                          return Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                event.title,
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 10,
-                                                ),
-                                              ),
-                                            ],
-                                          );
-                                        }).toList(),
+                return Padding(
+                  padding: const EdgeInsets.all(4.0), // Adjust padding to control spacing
+                  child: GestureDetector(
+                    onTap: () {
+                      if (index >= indexOfFirstDayMonth) {
+                        _onDateTap(currentDate);
+                      }
+                    },
+                    child: Stack(
+                      children: [
+                        Container(
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: currentDate == _highlightedDate
+                                ? const Color(0xFFFD00F0F)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              index < indexOfFirstDayMonth
+                                  ? const Text("")
+                                  : Text(
+                                      '${index + 1 - indexOfFirstDayMonth}',
+                                      style: TextStyle(
+                                        color: currentDate == _highlightedDate
+                                            ? Colors.white
+                                            : index % 7 == 6
+                                                ? Colors.redAccent
+                                                : Colors.black,
+                                        fontSize: 15,
                                       ),
-                                    )
-                                  : SizedBox.shrink(),
+                                    ),
+                              if (events != null && events.isNotEmpty)
+                                ...events.take(1).map((event) {
+                                  return Text(
+                                    event.title,
+                                    style: TextStyle(
+                                      color: currentDate == _highlightedDate
+                                          ? Colors.white
+                                          : Colors.black,
+                                      fontSize: 10,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  );
+                                }).toList(),
+                              if (events != null && events.length > 1)
+                                Text(
+                                  '+${events.length - 1} more',
+                                  style: TextStyle(
+                                    color: currentDate == _highlightedDate
+                                        ? Colors.white
+                                        : Colors.black,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          SizedBox(height: 10), // Add space between calendar grid and button
+          Align(
+            alignment: Alignment.bottomRight,
+            child: FloatingActionButton(
+              onPressed: _addEvent,
+              tooltip: 'Add Event',
+              child: Icon(Icons.add),
+              backgroundColor: Colors.red[200],
+            ),
+          ),
+          Expanded(
+            child: _highlightedDate != null && _selectedDateEvents.isNotEmpty
+                ? ListView.builder(
+                    itemCount: _selectedDateEvents.length,
+                    itemBuilder: (context, index) {
+                      Event event = _selectedDateEvents[index];
+                      return ListTile(
+                        title: Text(event.title),
+                        subtitle: Text(event.description),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.edit),
+                              onPressed: () {
+                                _editEvent(event); // Call _editEvent here
+                              },
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.delete),
+                              onPressed: () {
+                                setState(() {
+                                  _events[_highlightedDate]?.remove(event);
+                                  _selectedDateEvents.remove(event);
+                                });
+                              },
                             ),
                           ],
                         ),
                       );
                     },
+                  )
+                : Center(
+                    child: Text(
+                      _highlightedDate == null
+                          ? 'Select a date to view events'
+                          : 'No events for this date',
+                      style: TextStyle(fontSize: 16),
+                    ),
                   ),
-                ),
-                Positioned(
-                  bottom: 20,
-                  left: 20,
-                  right: 20,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        'web/asset/images/calendar-icon.png',
-                        fit: BoxFit.contain,
-                        width: MediaQuery.of(context).size.width,
-                      ),
-                      const SizedBox(height: 10),
-                      if (_selectedEventTitle != null && _selectedEventDescription != null)
-                        Container(
-                          width: MediaQuery.of(context).size.width,
-                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                          color: Colors.black.withOpacity(0.7),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _selectedEventTitle!,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _selectedEventDescription!,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ElevatedButton(
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              TextEditingController titleController = TextEditingController();
-                              TextEditingController descriptionController = TextEditingController();
-
-                              return AlertDialog(
-                                title: Text('Add Event'),
-                                content: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    TextField(
-                                      controller: titleController,
-                                      decoration: InputDecoration(labelText: 'Title'),
-                                    ),
-                                    TextField(
-                                      controller: descriptionController,
-                                      decoration: InputDecoration(labelText: 'Description'),
-                                    ),
-                                  ],
-                                ),
-                                actions: [
-                                  TextButton(
-                                    child: Text('Cancel'),
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                    },
-                                  ),
-                                  TextButton(
-                                    child: Text('Add'),
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                      _addEvent(
-                                        DateTime(
-                                          _selectedDate.year,
-                                          _selectedDate.month,
-                                          _selectedIndex + 1 - indexOfFirstDayMonth,
-                                        ),
-                                        titleController.text,
-                                        descriptionController.text,
-                                      );
-                                    },
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                        },
-                        child: const Text('Add Event'),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.red[200],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.person, size: 40, color: Colors.black),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    userName,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 18,
+                    ),
+                  ),
+                  SizedBox(height: 5),
+                  Text(
+                    userEmail,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.person),
+              title: Text('Edit Profile'),
+              onTap: _editProfile,
+            ),
+            ListTile(
+              leading: Icon(Icons.settings),
+              title: Text('Settings'),
+              onTap: _openSettings,
+            ),
+            ListTile(
+              leading: Icon(Icons.help),
+              title: Text('Help & Support'),
+              onTap: _openHelpSupport,
+            ),
+            ListTile(
+              leading: Icon(Icons.info),
+              title: Text('About'),
+              onTap: _openAbout,
+            ),
+            ListTile(
+              leading: Icon(Icons.arrow_back),
+              title: Text('Home'),
+              onTap: () {
+                Navigator.pop(context); // Close the drawer
+            },
+            ),
+          ],
+        ),
+      ),
     );
   }
+
+  List<String> daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  List<DateTime> listOfDatesInMonth(DateTime selectedDate) {
+    DateTime firstDayOfMonth = DateTime(selectedDate.year, selectedDate.month, 1);
+    DateTime lastDayOfMonth =
+        DateTime(selectedDate.year, selectedDate.month + 1, 0);
+    int daysInMonth = lastDayOfMonth.day;
+
+    List<DateTime> dates = [];
+    for (int i = 0; i < daysInMonth; i++) {
+      dates.add(firstDayOfMonth.add(Duration(days: i)));
+    }
+
+    return dates;
+  }
+
+  int getIndexOfFirstDayInMonth(DateTime selectedDate) {
+    return DateTime(selectedDate.year, selectedDate.month, 1).weekday - 1;
+  }
 }
-
-List<int> listOfDatesInMonth(DateTime currentDate) {
-  var selectedMonthFirstDay = DateTime(currentDate.year, currentDate.month, 1);
-  var nextMonthFirstDay = DateTime(
-    selectedMonthFirstDay.year,
-    selectedMonthFirstDay.month + 1,
-    selectedMonthFirstDay.day,
-  );
-  var totalDays = nextMonthFirstDay.difference(selectedMonthFirstDay).inDays;
-
-  var listOfDates = List<int>.generate(totalDays, (i) => i + 1);
-  return listOfDates;
-}
-
-int getIndexOfFirstDayInMonth(DateTime currentDate) {
-  var selectedMonthFirstDay = DateTime(currentDate.year, currentDate.month, 1);
-  var day = DateFormat('EEE').format(selectedMonthFirstDay).toUpperCase();
-
-  return daysOfWeek.indexOf(day) - 1;
-}
-
-final List<String> daysOfWeek = [
-  "MON",
-  "TUE",
-  "WED",
-  "THU",
-  "FRI",
-  "SAT",
-  "SUN",
-];
