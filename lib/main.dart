@@ -15,16 +15,18 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
+      debugShowCheckedModeBanner: false, // Remove debug banner
       home: const CalendarGrid(),
     );
   }
 }
 
 class Event {
-  final String title;
-  final String description;
+  String title;
+  String description;
+  String status;
 
-  Event(this.title, this.description);
+  Event(this.title, this.description, this.status);
 }
 
 class CalendarGrid extends StatefulWidget {
@@ -36,11 +38,11 @@ class CalendarGrid extends StatefulWidget {
 
 class _CalendarGridState extends State<CalendarGrid> {
   DateTime _selectedDate = DateTime.now();
+  DateTime? _highlightedDate;
   late int _selectedIndex;
   late int indexOfFirstDayMonth;
   Map<DateTime, List<Event>> _events = {};
-  String? _selectedEventTitle;
-  String? _selectedEventDescription;
+  List<Event> _selectedDateEvents = [];
 
   @override
   void initState() {
@@ -67,14 +69,207 @@ class _CalendarGridState extends State<CalendarGrid> {
     });
   }
 
-  void _addEvent(DateTime date, String title, String description) {
+  void _addEvent() {
+    if (_highlightedDate == null) return;
+
+    TextEditingController titleController = TextEditingController();
+    TextEditingController descriptionController = TextEditingController();
+    String status = 'Free';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Add Event'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(labelText: 'Title'),
+              ),
+              TextField(
+                controller: descriptionController,
+                decoration: InputDecoration(labelText: 'Description'),
+              ),
+              DropdownButtonFormField<String>(
+                value: status,
+                decoration: InputDecoration(labelText: 'Status'),
+                items: ['Free', 'Busy'].map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.circle,
+                          color: _getStatusColor(value),
+                        ),
+                        SizedBox(width: 8),
+                        Text(value),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  setState(() {
+                    status = newValue!;
+                  });
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Add'),
+              onPressed: () {
+                setState(() {
+                  _events.putIfAbsent(
+                    _highlightedDate!,
+                    () => [],
+                  ).add(
+                    Event(
+                      titleController.text,
+                      descriptionController.text,
+                      status,
+                    ),
+                  );
+                });
+                Navigator.of(context).pop();
+                _updateSelectedDateEvents();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showDiscardDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Discard this event?'),
+          actions: [
+            TextButton(
+              child: Text('Keep Editing'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Discard'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _editEvent(Event event) {
+    TextEditingController titleController =
+        TextEditingController(text: event.title);
+    TextEditingController descriptionController =
+        TextEditingController(text: event.description);
+    String status = event.status;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Edit Event'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(labelText: 'Title'),
+              ),
+              TextField(
+                controller: descriptionController,
+                decoration: InputDecoration(labelText: 'Description'),
+              ),
+              DropdownButtonFormField<String>(
+                value: status,
+                decoration: InputDecoration(labelText: 'Status'),
+                items: ['Free', 'Busy'].map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.circle,
+                          color: _getStatusColor(value),
+                        ),
+                        SizedBox(width: 8),
+                        Text(value),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  setState(() {
+                    status = newValue!;
+                  });
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Save'),
+              onPressed: () {
+                setState(() {
+                  event.title = titleController.text;
+                  event.description = descriptionController.text;
+                  event.status = status;
+                });
+                Navigator.of(context).pop();
+                _updateSelectedDateEvents();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _onDateTap(DateTime date) {
     setState(() {
-      _events.putIfAbsent(date, () => []).add(
-        Event(title, description),
-      );
-      _selectedEventTitle = title;
-      _selectedEventDescription = description;
+      _highlightedDate = date;
+      _selectedIndex = indexOfFirstDayMonth + date.day - 1;
+      _updateSelectedDateEvents();
     });
+  }
+
+  void _updateSelectedDateEvents() {
+    _selectedDateEvents = _events[_highlightedDate] ?? [];
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Busy':
+        return Colors.red;
+      case 'Free':
+      default:
+        return Colors.green;
+    }
   }
 
   @override
@@ -82,7 +277,7 @@ class _CalendarGridState extends State<CalendarGrid> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.red[200],
         shadowColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(
@@ -95,15 +290,14 @@ class _CalendarGridState extends State<CalendarGrid> {
           IconButton(
             icon: const Icon(
               Icons.arrow_forward,
-              color: Colors.black,
             ),
             onPressed: _goToNextMonth,
-          )
+          ),
         ],
         title: Column(
           children: [
             const Text(
-              "Calendar",
+              "Prime Scheduler",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 22,
@@ -115,9 +309,9 @@ class _CalendarGridState extends State<CalendarGrid> {
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 15,
-                color: Colors.grey,
+                color: Colors.black,
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -147,203 +341,154 @@ class _CalendarGridState extends State<CalendarGrid> {
               },
             ),
           ),
-          Expanded(
-            child: Stack(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(20),
-                      bottomRight: Radius.circular(20),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        spreadRadius: 0.1,
-                        blurRadius: 7,
-                        offset: const Offset(0, 7.75),
-                      ),
-                    ],
-                  ),
-                  child: GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    shrinkWrap: true,
-                    padding: EdgeInsets.zero,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 7,
-                    ),
-                    itemCount: listOfDatesInMonth(_selectedDate).length + indexOfFirstDayMonth,
-                    itemBuilder: (BuildContext context, int index) {
-                      DateTime currentDate = DateTime(
-                        _selectedDate.year,
-                        _selectedDate.month,
-                        index + 1 - indexOfFirstDayMonth,
-                      );
-                      List<Event>? events = _events[currentDate];
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(40),
+                bottomRight: Radius.circular(40),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  spreadRadius: 0.1,
+                  blurRadius: 7,
+                  offset: const Offset(0, 7.75),
+                ),
+              ],
+            ),
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 7,
+                childAspectRatio: 1.0, // Adjust the aspect ratio to control the size
+              ),
+              itemCount: 42,
+              itemBuilder: (BuildContext context, int index) {
+                int day = index + 1 - indexOfFirstDayMonth;
+                DateTime currentDate = DateTime(_selectedDate.year, _selectedDate.month, day);
+                List<Event>? events = (day > 0 && day <= DateTime(_selectedDate.year, _selectedDate.month + 1, 0).day) ? _events[currentDate] : null;
 
-                      return Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Stack(
+                return Padding(
+                  padding: const EdgeInsets.all(4.0), // Adjust padding to control spacing
+                  child: GestureDetector(
+                    onTap: () {
+                      if (day > 0 && day <= DateTime(_selectedDate.year, _selectedDate.month + 1, 0).day) {
+                        _onDateTap(currentDate);
+                      }
+                    },
+                    child: Stack(
+                      children: [
+                        Container(
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: currentDate == _highlightedDate
+                                ? const Color(0xFFFD00F0F)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (day > 0 && day <= DateTime(_selectedDate.year, _selectedDate.month + 1, 0).day)
+                                Text(
+                                  '$day',
+                                  style: TextStyle(
+                                    color: currentDate == _highlightedDate
+                                        ? Colors.white
+                                        : index % 7 == 6
+                                            ? Colors.redAccent
+                                            : Colors.black,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              if (events != null && events.isNotEmpty)
+                                ...events.take(1).map((event) {
+                                  return Text(
+                                    event.title,
+                                    style: TextStyle(
+                                      color: _getStatusColor(event.status),
+                                      fontSize: 10,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  );
+                                }).toList(),
+                              if (events != null && events.length > 1)
+                                Text(
+                                  '+${events.length - 1} more',
+                                  style: TextStyle(
+                                    color: currentDate == _highlightedDate
+                                        ? Colors.white
+                                        : Colors.black,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          SizedBox(height: 10), // Add space between calendar grid and button
+          ElevatedButton(
+            onPressed: _addEvent,
+            child: const Text("Add Event"),
+          ),
+          Expanded(
+            child: _highlightedDate != null && _selectedDateEvents.isNotEmpty
+                ? ListView.builder(
+                    itemCount: _selectedDateEvents.length,
+                    itemBuilder: (context, index) {
+                      Event event = _selectedDateEvents[index];
+                      return ListTile(
+                        leading: Icon(
+                          Icons.circle,
+                          color: _getStatusColor(event.status),
+                        ),
+                        title: Text(
+                          event.title,
+                          style: TextStyle(
+                            color: _getStatusColor(event.status),
+                          ),
+                        ),
+                        subtitle: Text(event.description),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: index == _selectedIndex
-                                    ? const Color(0xFFFD00F0F)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  index < indexOfFirstDayMonth
-                                      ? const Text("")
-                                      : Text(
-                                          '${index + 1 - indexOfFirstDayMonth}',
-                                          style: TextStyle(
-                                            color: index == _selectedIndex
-                                                ? Colors.white
-                                                : index % 7 == 6
-                                                    ? Colors.redAccent
-                                                    : Colors.black,
-                                            fontSize: 17,
-                                          ),
-                                        ),
-                                ],
-                              ),
+                            IconButton(
+                              icon: Icon(Icons.edit),
+                              onPressed: () {
+                                _editEvent(event); // Call _editEvent here
+                              },
                             ),
-                            Positioned(
-                              bottom: 0,
-                              left: 0,
-                              right: 0,
-                              child: events != null && events.isNotEmpty
-                                  ? Container(
-                                      color: Colors.black.withOpacity(0.7),
-                                      padding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: events.map((event) {
-                                          return Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                event.title,
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 10,
-                                                ),
-                                              ),
-                                            ],
-                                          );
-                                        }).toList(),
-                                      ),
-                                    )
-                                  : SizedBox.shrink(),
+                            IconButton(
+                              icon: Icon(Icons.delete),
+                              onPressed: () {
+                                setState(() {
+                                  _events[_highlightedDate]?.remove(event);
+                                  _selectedDateEvents.remove(event);
+                                });
+                              },
                             ),
                           ],
                         ),
                       );
                     },
+                  )
+                : Center(
+                    child: Text(
+                      _highlightedDate == null
+                          ? 'Select a date to view events'
+                          : 'No events for this date',
+                      style: TextStyle(fontSize: 16),
+                    ),
                   ),
-                ),
-                Positioned(
-                  bottom: 20,
-                  left: 20,
-                  right: 20,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        'web/asset/images/calendar-icon.png',
-                        fit: BoxFit.contain,
-                        width: MediaQuery.of(context).size.width,
-                      ),
-                      const SizedBox(height: 10),
-                      if (_selectedEventTitle != null && _selectedEventDescription != null)
-                        Container(
-                          width: MediaQuery.of(context).size.width,
-                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                          color: Colors.black.withOpacity(0.7),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _selectedEventTitle!,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _selectedEventDescription!,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ElevatedButton(
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              TextEditingController titleController = TextEditingController();
-                              TextEditingController descriptionController = TextEditingController();
-
-                              return AlertDialog(
-                                title: Text('Add Event'),
-                                content: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    TextField(
-                                      controller: titleController,
-                                      decoration: InputDecoration(labelText: 'Title'),
-                                    ),
-                                    TextField(
-                                      controller: descriptionController,
-                                      decoration: InputDecoration(labelText: 'Description'),
-                                    ),
-                                  ],
-                                ),
-                                actions: [
-                                  TextButton(
-                                    child: Text('Cancel'),
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                    },
-                                  ),
-                                  TextButton(
-                                    child: Text('Add'),
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                      _addEvent(
-                                        DateTime(
-                                          _selectedDate.year,
-                                          _selectedDate.month,
-                                          _selectedIndex + 1 - indexOfFirstDayMonth,
-                                        ),
-                                        titleController.text,
-                                        descriptionController.text,
-                                      );
-                                    },
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                        },
-                        child: const Text('Add Event'),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -353,30 +498,14 @@ class _CalendarGridState extends State<CalendarGrid> {
 
 List<int> listOfDatesInMonth(DateTime currentDate) {
   var selectedMonthFirstDay = DateTime(currentDate.year, currentDate.month, 1);
-  var nextMonthFirstDay = DateTime(
-    selectedMonthFirstDay.year,
-    selectedMonthFirstDay.month + 1,
-    selectedMonthFirstDay.day,
-  );
+  var nextMonthFirstDay = DateTime(selectedMonthFirstDay.year, selectedMonthFirstDay.month + 1, 1);
   var totalDays = nextMonthFirstDay.difference(selectedMonthFirstDay).inDays;
-
-  var listOfDates = List<int>.generate(totalDays, (i) => i + 1);
-  return listOfDates;
+  return List<int>.generate(totalDays, (i) => i + 1);
 }
 
 int getIndexOfFirstDayInMonth(DateTime currentDate) {
   var selectedMonthFirstDay = DateTime(currentDate.year, currentDate.month, 1);
-  var day = DateFormat('EEE').format(selectedMonthFirstDay).toUpperCase();
-
-  return daysOfWeek.indexOf(day) - 1;
+  return selectedMonthFirstDay.weekday % 7;
 }
 
-final List<String> daysOfWeek = [
-  "MON",
-  "TUE",
-  "WED",
-  "THU",
-  "FRI",
-  "SAT",
-  "SUN",
-];
+const List<String> daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
