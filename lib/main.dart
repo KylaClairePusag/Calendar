@@ -5,6 +5,11 @@ void main() {
   runApp(const MyApp());
 }
 
+enum AppTheme {
+  Light,
+  Dark,
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
@@ -12,16 +17,26 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Calendar App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        brightness: Brightness.light, // Default theme is light
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark, // Dark theme
-      ),
+      theme: _buildThemeData(AppTheme.Light), // Set initial light theme
+      darkTheme: _buildThemeData(AppTheme.Dark), // Set dark theme
       debugShowCheckedModeBanner: false, // Remove debug banner
       home: const CalendarGrid(),
     );
+  }
+
+  ThemeData _buildThemeData(AppTheme themeMode) {
+    switch (themeMode) {
+      case AppTheme.Light:
+        return ThemeData(
+          primarySwatch: Colors.red,
+          brightness: Brightness.light,
+        );
+      case AppTheme.Dark:
+        return ThemeData(
+          primarySwatch: Colors.red,
+          brightness: Brightness.dark,
+        );
+    }
   }
 }
 
@@ -47,46 +62,31 @@ class _CalendarGridState extends State<CalendarGrid> {
   late int indexOfFirstDayMonth;
   Map<DateTime, List<Event>> _events = {};
   List<Event> _selectedDateEvents = [];
-  bool _isDarkMode = false; // Track current theme mode
-
-  String _userName = 'User Name';
-  String _userEmail = 'user@example.com';
-
-  TextEditingController _nameController = TextEditingController();
-  TextEditingController _emailController = TextEditingController();
+  String userName = "Dianne Kristel Castillo"; // User name
+  String userEmail = "dayan@gmail.com"; // User email
+  AppTheme _currentTheme = AppTheme.Light; // Track current theme
 
   @override
   void initState() {
     super.initState();
     _initializeSelectedIndex();
-    _nameController.text = _userName;
-    _emailController.text = _userEmail;
   }
 
   void _initializeSelectedIndex() {
-    indexOfFirstDayMonth =
-        getIndexOfFirstDayInMonth(_selectedDate);
-    _selectedIndex = indexOfFirstDayMonth +
-        int.parse(DateFormat('d').format(_selectedDate)) -
-        1;
+    indexOfFirstDayMonth = getIndexOfFirstDayInMonth(_selectedDate);
+    _selectedIndex = indexOfFirstDayMonth + int.parse(DateFormat('d').format(_selectedDate)) - 1;
   }
 
   void _goToPreviousMonth() {
     setState(() {
-      _selectedDate = DateTime(
-          _selectedDate.year,
-          _selectedDate.month - 1,
-          1);
+      _selectedDate = DateTime(_selectedDate.year, _selectedDate.month - 1, 1);
       _initializeSelectedIndex();
     });
   }
 
   void _goToNextMonth() {
     setState(() {
-      _selectedDate = DateTime(
-          _selectedDate.year,
-          _selectedDate.month + 1,
-          1);
+      _selectedDate = DateTime(_selectedDate.year, _selectedDate.month + 1, 1);
       _initializeSelectedIndex();
     });
   }
@@ -94,10 +94,8 @@ class _CalendarGridState extends State<CalendarGrid> {
   void _addEvent() {
     if (_highlightedDate == null) return;
 
-    TextEditingController titleController =
-        TextEditingController();
-    TextEditingController descriptionController =
-        TextEditingController();
+    TextEditingController titleController = TextEditingController();
+    TextEditingController descriptionController = TextEditingController();
     String status = 'Free';
 
     showDialog(
@@ -110,33 +108,19 @@ class _CalendarGridState extends State<CalendarGrid> {
             children: [
               TextField(
                 controller: titleController,
-                decoration: InputDecoration(
-                    labelText: 'Title'),
+                decoration: InputDecoration(labelText: 'Title'),
               ),
               TextField(
                 controller: descriptionController,
-                decoration: InputDecoration(
-                    labelText: 'Description'),
+                decoration: InputDecoration(labelText: 'Description'),
               ),
               DropdownButtonFormField<String>(
                 value: status,
-                decoration: InputDecoration(
-                    labelText: 'Status'),
-                items: ['Free', 'Busy']
-                    .map((String value) {
+                decoration: InputDecoration(labelText: 'Status'),
+                items: ['Free', 'Busy'].map((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.circle,
-                          color: _getStatusColor(
-                              value),
-                        ),
-                        SizedBox(width: 8),
-                        Text(value),
-                      ],
-                    ),
+                    child: Text(value),
                   );
                 }).toList(),
                 onChanged: (newValue) {
@@ -159,8 +143,9 @@ class _CalendarGridState extends State<CalendarGrid> {
               onPressed: () {
                 setState(() {
                   _events.putIfAbsent(
-                      _highlightedDate!,
-                      () => []).add(
+                    _highlightedDate!,
+                    () => [],
+                  ).add(
                     Event(
                       titleController.text,
                       descriptionController.text,
@@ -221,33 +206,19 @@ class _CalendarGridState extends State<CalendarGrid> {
             children: [
               TextField(
                 controller: titleController,
-                decoration: InputDecoration(
-                    labelText: 'Title'),
+                decoration: InputDecoration(labelText: 'Title'),
               ),
               TextField(
                 controller: descriptionController,
-                decoration: InputDecoration(
-                    labelText: 'Description'),
+                decoration: InputDecoration(labelText: 'Description'),
               ),
               DropdownButtonFormField<String>(
                 value: status,
-                decoration: InputDecoration(
-                    labelText: 'Status'),
-                items: ['Free', 'Busy']
-                    .map((String value) {
+                decoration: InputDecoration(labelText: 'Status'),
+                items: ['Free', 'Busy'].map((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.circle,
-                          color: _getStatusColor(
-                              value),
-                        ),
-                        SizedBox(width: 8),
-                        Text(value),
-                      ],
-                    ),
+                    child: Text(value),
                   );
                 }).toList(),
                 onChanged: (newValue) {
@@ -270,8 +241,7 @@ class _CalendarGridState extends State<CalendarGrid> {
               onPressed: () {
                 setState(() {
                   event.title = titleController.text;
-                  event.description =
-                      descriptionController.text;
+                  event.description = descriptionController.text;
                   event.status = status;
                 });
                 Navigator.of(context).pop();
@@ -287,38 +257,18 @@ class _CalendarGridState extends State<CalendarGrid> {
   void _onDateTap(DateTime date) {
     setState(() {
       _highlightedDate = date;
-      _selectedIndex =
-          indexOfFirstDayMonth + date.day - 1;
+      _selectedIndex = indexOfFirstDayMonth + date.day - 1;
       _updateSelectedDateEvents();
     });
   }
 
   void _updateSelectedDateEvents() {
-    _selectedDateEvents =
-        _events[_highlightedDate] ?? [];
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Busy':
-        return Colors.red;
-      case 'Free':
-      default:
-        return Colors.green;
-    }
-  }
-
-  void _toggleTheme() {
-    setState(() {
-      _isDarkMode = !_isDarkMode;
-    });
+    _selectedDateEvents = _events[_highlightedDate] ?? [];
   }
 
   void _editProfile() {
-    TextEditingController nameController =
-        TextEditingController(text: _userName);
-    TextEditingController emailController =
-        TextEditingController(text: _userEmail);
+    TextEditingController nameController = TextEditingController(text: userName);
+    TextEditingController emailController = TextEditingController(text: userEmail);
 
     showDialog(
       context: context,
@@ -330,13 +280,11 @@ class _CalendarGridState extends State<CalendarGrid> {
             children: [
               TextField(
                 controller: nameController,
-                decoration:
-                    InputDecoration(labelText: 'Name'),
+                decoration: InputDecoration(labelText: 'Name'),
               ),
               TextField(
                 controller: emailController,
-                decoration:
-                    InputDecoration(labelText: 'Email'),
+                decoration: InputDecoration(labelText: 'Email'),
               ),
             ],
           ),
@@ -351,8 +299,8 @@ class _CalendarGridState extends State<CalendarGrid> {
               child: Text('Save'),
               onPressed: () {
                 setState(() {
-                  _userName = nameController.text;
-                  _userEmail = emailController.text;
+                  userName = nameController.text;
+                  userEmail = emailController.text;
                 });
                 Navigator.of(context).pop();
               },
@@ -363,144 +311,182 @@ class _CalendarGridState extends State<CalendarGrid> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Calendar'),
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            UserAccountsDrawerHeader(
-              accountName: Text(_userName),
-              accountEmail: Text(_userEmail),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: Color.fromARGB(255, 230, 224, 224),
-                child: Text(
-                  _userName.isEmpty ? 'U' : _userName[0],
-                  style: TextStyle(fontSize: 40.0),
-                ),
-              ),
-            ),
-            ListTile(
-              leading: Icon(Icons.person),
-              title: Text('Edit Profile'),
-              onTap: _editProfile,
-            ),
-            ListTile(
-              leading: Icon(Icons.settings),
-              title: Text('Settings'),
-              onTap: () {
-                Navigator.pop(context); // Close drawer
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: Text('Settings'),
-                      content: Text('Settings dialog'),
-                      actions: [
-                        TextButton(
-                          child: Text('Close'),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.help),
-              title: Text('Help & Support'),
-              onTap: () {
-                Navigator.pop(context); // Close drawer
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: Text('Help & Support'),
-                      content: Text('Contact us at primescheduler@help.com. Visit our PrimeScheduler site for common questions.'),
-                      actions: [
-                        TextButton(
-                          child: Text('Close'),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.info),
-              title: Text('About'),
-              onTap: () {
-                Navigator.pop(context); // Close drawer
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: Text('About'),
-                      content: Text('Prime Scheduler App. Version 1.0.0 Developed by Group 9'),
-                      actions: [
-                        TextButton(
-                          child: Text('Close'),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            mainAxisAlignment:
-                MainAxisAlignment.spaceBetween,
+  void _openSettings() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Settings'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              IconButton(
-                icon: Icon(Icons.arrow_back),
-                onPressed: _goToPreviousMonth,
+              ListTile(
+                leading: Icon(Icons.palette),
+                title: Text('Theme'),
+                onTap: _showThemeDialog, // Open theme selection dialog
               ),
-              Text(
-                DateFormat.yMMMM()
-                    .format(_selectedDate),
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold),
-              ),
-              IconButton(
-                icon: Icon(Icons.arrow_forward),
-                onPressed: _goToNextMonth,
+              ListTile(
+                leading: Icon(Icons.notifications),
+                title: Text('Notifications'),
+                onTap: () {
+                  // Handle notification settings
+                },
               ),
             ],
           ),
+          actions: [
+            TextButton(
+              child: Text('Close'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _openHelpSupport() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Help & Support'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Contact us at primescheduler@help.com'),
+              Text('Visit our PrimeScheduler site for common questions.'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Close'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _openAbout() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('About'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Prime Scheduler App'),
+              Text('Version 1.0.0'),
+              Text('Developed by Group 9'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Close'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showThemeDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Select Theme'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text('Light Theme'),
+                onTap: () {
+                  _setTheme(AppTheme.Light);
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                title: Text('Dark Theme'),
+                onTap: () {
+                  _setTheme(AppTheme.Dark);
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _setTheme(AppTheme themeMode) {
+    setState(() {
+      _currentTheme = themeMode;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.red[200],
+        shadowColor: Colors.transparent,
+        leading: Builder(
+          builder: (BuildContext context) {
+            return IconButton(
+              icon: const Icon(Icons.menu, color: Colors.black),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+              tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+            );
+          },
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.arrow_back,
+              color: Colors.black,
+            ),
+            onPressed: _goToPreviousMonth,
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.arrow_forward,
+              color: Colors.black,
+            ),
+            onPressed: _goToNextMonth,
+          ),
+        ],
+        title: Text(
+          DateFormat.yMMMM().format(_selectedDate),
+          style: TextStyle(color: Colors.black),
+        ),
+      ),
+      body: Column(
+        children: [
           SizedBox(
             height: 50,
             child: GridView.builder(
-              physics:
-                  const NeverScrollableScrollPhysics(),
+              physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 7,
               ),
               itemCount: daysOfWeek.length,
-              itemBuilder:
-                  (BuildContext context, int index) {
+              itemBuilder: (BuildContext context, int index) {
                 return Container(
                   alignment: Alignment.center,
                   child: Text(
@@ -518,17 +504,13 @@ class _CalendarGridState extends State<CalendarGrid> {
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius:
-                  const BorderRadius.only(
-                bottomLeft:
-                    Radius.circular(20),
-                bottomRight:
-                    Radius.circular(20),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
               ),
               boxShadow: [
                 BoxShadow(
-                  color:
-                      Colors.black.withOpacity(0.3),
+                  color: Colors.black.withOpacity(0.3),
                   spreadRadius: 0.1,
                   blurRadius: 7,
                   offset: const Offset(0, 7.75),
@@ -536,56 +518,27 @@ class _CalendarGridState extends State<CalendarGrid> {
               ],
             ),
             child: GridView.builder(
-              physics:
-                  const NeverScrollableScrollPhysics(),
+              physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
               padding: EdgeInsets.zero,
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 7,
-                childAspectRatio:
-                    1.0, // Adjust the aspect ratio to control the size
+                childAspectRatio: 1.0, // Adjust the aspect ratio to control the size
               ),
-              itemCount: 42,
-              itemBuilder:
-                  (BuildContext context, int index) {
-                int day = index +
-                    1 -
-                    indexOfFirstDayMonth;
+              itemCount: listOfDatesInMonth(_selectedDate).length + indexOfFirstDayMonth,
+              itemBuilder: (BuildContext context, int index) {
                 DateTime currentDate = DateTime(
-                    _selectedDate.year,
-                    _selectedDate.month,
-                    day);
-                List<Event>? events =
-                    (day > 0 &&
-                            day <=
-                                DateTime(
-                                        _selectedDate
-                                            .year,
-                                        _selectedDate
-                                                .month +
-                                            1,
-                                        0)
-                                    .day)
-                        ? _events[currentDate]
-                        : null;
+                  _selectedDate.year,
+                  _selectedDate.month,
+                  index + 1 - indexOfFirstDayMonth,
+                );
+                List<Event>? events = _events[currentDate];
 
                 return Padding(
-                  padding:
-                      const EdgeInsets.all(4.0), // Adjust padding to control spacing
+                  padding: const EdgeInsets.all(4.0), // Adjust padding to control spacing
                   child: GestureDetector(
                     onTap: () {
-                      if (day >
-                              0 &&
-                          day <=
-                              DateTime(
-                                      _selectedDate
-                                          .year,
-                                      _selectedDate
-                                              .month +
-                                          1,
-                                      0)
-                                  .day) {
+                      if (index >= indexOfFirstDayMonth) {
                         _onDateTap(currentDate);
                       }
                     },
@@ -593,86 +546,48 @@ class _CalendarGridState extends State<CalendarGrid> {
                       children: [
                         Container(
                           alignment: Alignment.center,
-                          decoration:
-                              BoxDecoration(
-                            color:
-                                currentDate ==
-                                        _highlightedDate
-                                    ? const Color(
-                                        0xFFFD00F0F)
-                                    : Colors.transparent,
-                            borderRadius:
-                                BorderRadius.circular(
-                                    50),
+                          decoration: BoxDecoration(
+                            color: currentDate == _highlightedDate
+                                ? const Color(0xFFFD00F0F)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(50),
                           ),
                           child: Column(
-                            mainAxisAlignment:
-                                MainAxisAlignment
-                                    .center,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              if (day >
-                                      0 &&
-                                  day <=
-                                      DateTime(
-                                              _selectedDate
-                                                  .year,
-                                              _selectedDate
-                                                      .month +
-                                                  1,
-                                              0)
-                                          .day)
-                                Text(
-                                  '$day',
-                                  style: TextStyle(
-                                    color:
-                                        currentDate ==
-                                                _highlightedDate
-                                            ? Colors
-                                                .white
-                                            : index %
-                                                        7 ==
-                                                    6
-                                                ? Colors
-                                                    .redAccent
-                                                : Colors
-                                                    .black,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              if (events !=
-                                      null &&
-                                  events.isNotEmpty)
-                                ...events
-                                    .take(1)
-                                    .map((event) {
+                              index < indexOfFirstDayMonth
+                                  ? const Text("")
+                                  : Text(
+                                      '${index + 1 - indexOfFirstDayMonth}',
+                                      style: TextStyle(
+                                        color: currentDate == _highlightedDate
+                                            ? Colors.white
+                                            : index % 7 == 6
+                                                ? Colors.redAccent
+                                                : Colors.black,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                              if (events != null && events.isNotEmpty)
+                                ...events.take(1).map((event) {
                                   return Text(
                                     event.title,
-                                    style:
-                                        TextStyle(
-                                      color: _getStatusColor(
-                                          event.status),
+                                    style: TextStyle(
+                                      color: currentDate == _highlightedDate
+                                          ? Colors.white
+                                          : Colors.black,
                                       fontSize: 10,
                                     ),
-                                    overflow:
-                                        TextOverflow
-                                            .ellipsis,
+                                    overflow: TextOverflow.ellipsis,
                                   );
                                 }).toList(),
-                              if (events !=
-                                      null &&
-                                  events.length >
-                                      1)
+                              if (events != null && events.length > 1)
                                 Text(
                                   '+${events.length - 1} more',
-                                  style:
-                                      TextStyle(
-                                    color:
-                                        currentDate ==
-                                                _highlightedDate
-                                            ? Colors
-                                                .white
-                                            : Colors
-                                                .black,
+                                  style: TextStyle(
+                                    color: currentDate == _highlightedDate
+                                        ? Colors.white
+                                        : Colors.black,
                                     fontSize: 10,
                                   ),
                                 ),
@@ -687,59 +602,39 @@ class _CalendarGridState extends State<CalendarGrid> {
             ),
           ),
           SizedBox(height: 10), // Add space between calendar grid and button
-          ElevatedButton(
-            onPressed: _addEvent,
-            child: const Text("Add Event"),
+          Align(
+            alignment: Alignment.bottomRight,
+            child: FloatingActionButton(
+              onPressed: _addEvent,
+              tooltip: 'Add Event',
+              child: Icon(Icons.add),
+              backgroundColor: Colors.red[200],
+            ),
           ),
           Expanded(
-            child: _highlightedDate !=
-                        null &&
-                    _selectedDateEvents
-                        .isNotEmpty
+            child: _highlightedDate != null && _selectedDateEvents.isNotEmpty
                 ? ListView.builder(
-                    itemCount:
-                        _selectedDateEvents.length,
-                    itemBuilder:
-                        (context, index) {
-                      Event event =
-                          _selectedDateEvents[
-                              index];
+                    itemCount: _selectedDateEvents.length,
+                    itemBuilder: (context, index) {
+                      Event event = _selectedDateEvents[index];
                       return ListTile(
-                        leading: Icon(
-                          Icons.circle,
-                          color: _getStatusColor(
-                              event.status),
-                        ),
-                        title: Text(
-                          event.title,
-                          style: TextStyle(
-                            color: _getStatusColor(
-                                event.status),
-                          ),
-                        ),
-                        subtitle:
-                            Text(event.description),
+                        title: Text(event.title),
+                        subtitle: Text(event.description),
                         trailing: Row(
-                          mainAxisSize:
-                              MainAxisSize.min,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
                               icon: Icon(Icons.edit),
                               onPressed: () {
-                                _editEvent(
-                                    event); // Call _editEvent here
+                                _editEvent(event); // Call _editEvent here
                               },
                             ),
                             IconButton(
                               icon: Icon(Icons.delete),
                               onPressed: () {
                                 setState(() {
-                                  _events[_highlightedDate]
-                                      ?.remove(
-                                          event);
-                                  _selectedDateEvents
-                                      .remove(
-                                          event);
+                                  _events[_highlightedDate]?.remove(event);
+                                  _selectedDateEvents.remove(event);
                                 });
                               },
                             ),
@@ -750,52 +645,100 @@ class _CalendarGridState extends State<CalendarGrid> {
                   )
                 : Center(
                     child: Text(
-                      _highlightedDate ==
-                              null
+                      _highlightedDate == null
                           ? 'Select a date to view events'
                           : 'No events for this date',
-                      style:
-                          TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 16),
                     ),
                   ),
           ),
         ],
       ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.red[200],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.person, size: 40, color: Colors.black),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    userName,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 18,
+                    ),
+                  ),
+                  SizedBox(height: 5),
+                  Text(
+                    userEmail,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.person),
+              title: Text('Edit Profile'),
+              onTap: _editProfile,
+            ),
+            ListTile(
+              leading: Icon(Icons.settings),
+              title: Text('Settings'),
+              onTap: _openSettings,
+            ),
+            ListTile(
+              leading: Icon(Icons.help),
+              title: Text('Help & Support'),
+              onTap: _openHelpSupport,
+            ),
+            ListTile(
+              leading: Icon(Icons.info),
+              title: Text('About'),
+              onTap: _openAbout,
+            ),
+            ListTile(
+              leading: Icon(Icons.arrow_back),
+              title: Text('Home'),
+              onTap: () {
+                Navigator.pop(context); // Close the drawer
+            },
+            ),
+          ],
+        ),
+      ),
     );
   }
-}
 
-List<int> listOfDatesInMonth(
-    DateTime currentDate) {
-  var selectedMonthFirstDay =
-      DateTime(currentDate.year,
-          currentDate.month, 1);
-  var nextMonthFirstDay = DateTime(
-      selectedMonthFirstDay.year,
-      selectedMonthFirstDay.month + 1,
-      1);
-  var totalDays = nextMonthFirstDay
-      .difference(selectedMonthFirstDay)
-      .inDays;
-  return List<int>.generate(
-      totalDays, (i) => i + 1);
-}
+  List<String> daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-int getIndexOfFirstDayInMonth(
-    DateTime currentDate) {
-  var selectedMonthFirstDay =
-      DateTime(currentDate.year,
-          currentDate.month, 1);
-  return selectedMonthFirstDay
-      .weekday % 7;
-}
+  List<DateTime> listOfDatesInMonth(DateTime selectedDate) {
+    DateTime firstDayOfMonth = DateTime(selectedDate.year, selectedDate.month, 1);
+    DateTime lastDayOfMonth =
+        DateTime(selectedDate.year, selectedDate.month + 1, 0);
+    int daysInMonth = lastDayOfMonth.day;
 
-const List<String> daysOfWeek = [
-  "Sun",
-  "Mon",
-  "Tue",
-  "Wed",
-  "Thu",
-  "Fri",
-  "Sat"
-];
+    List<DateTime> dates = [];
+    for (int i = 0; i < daysInMonth; i++) {
+      dates.add(firstDayOfMonth.add(Duration(days: i)));
+    }
+
+    return dates;
+  }
+
+  int getIndexOfFirstDayInMonth(DateTime selectedDate) {
+    return DateTime(selectedDate.year, selectedDate.month, 1).weekday - 1;
+  }
+}
