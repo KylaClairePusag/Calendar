@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -10,8 +11,21 @@ enum AppTheme {
   Dark,
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
+
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  AppTheme _currentTheme = AppTheme.Light;
+
+  void _toggleTheme(AppTheme theme) {
+    setState(() {
+      _currentTheme = theme;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,8 +33,9 @@ class MyApp extends StatelessWidget {
       title: 'Calendar App',
       theme: _buildThemeData(AppTheme.Light), // Set initial light theme
       darkTheme: _buildThemeData(AppTheme.Dark), // Set dark theme
+      themeMode: _currentTheme == AppTheme.Light ? ThemeMode.light : ThemeMode.dark,
       debugShowCheckedModeBanner: false, // Remove debug banner
-      home: const CalendarGrid(),
+      home: CalendarGrid(toggleTheme: _toggleTheme),
     );
   }
 
@@ -30,11 +45,31 @@ class MyApp extends StatelessWidget {
         return ThemeData(
           primarySwatch: Colors.red,
           brightness: Brightness.light,
+          scaffoldBackgroundColor: Colors.white,
+          cardColor: Colors.white,
+          textTheme: TextTheme(
+            bodyLarge: TextStyle(color: Colors.black),
+          ),
+          appBarTheme: AppBarTheme(
+            backgroundColor: Colors.red[200],
+            titleTextStyle: TextStyle(color: Colors.black, fontSize: 20),
+            iconTheme: IconThemeData(color: Colors.black),
+          ),
         );
       case AppTheme.Dark:
         return ThemeData(
           primarySwatch: Colors.red,
           brightness: Brightness.dark,
+          scaffoldBackgroundColor: Colors.black,
+          cardColor: Colors.grey[900],
+          textTheme: TextTheme(
+            bodyLarge: TextStyle(color: Colors.white),
+          ),
+          appBarTheme: AppBarTheme(
+            backgroundColor: Colors.red[700],
+            titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
+            iconTheme: IconThemeData(color: Colors.white),
+          ),
         );
     }
   }
@@ -49,7 +84,9 @@ class Event {
 }
 
 class CalendarGrid extends StatefulWidget {
-  const CalendarGrid({Key? key}) : super(key: key);
+  final Function(AppTheme) toggleTheme;
+
+  const CalendarGrid({Key? key, required this.toggleTheme}) : super(key: key);
 
   @override
   _CalendarGridState createState() => _CalendarGridState();
@@ -64,7 +101,6 @@ class _CalendarGridState extends State<CalendarGrid> {
   List<Event> _selectedDateEvents = [];
   String userName = "Dianne Kristel Castillo"; // User name
   String userEmail = "dayan@gmail.com"; // User email
-  AppTheme _currentTheme = AppTheme.Light; // Track current theme
 
   @override
   void initState() {
@@ -96,7 +132,7 @@ class _CalendarGridState extends State<CalendarGrid> {
 
     TextEditingController titleController = TextEditingController();
     TextEditingController descriptionController = TextEditingController();
-    String status = 'Free';
+    String status = 'Busy'; // Default status to 'Busy'
 
     showDialog(
       context: context,
@@ -114,20 +150,21 @@ class _CalendarGridState extends State<CalendarGrid> {
                 controller: descriptionController,
                 decoration: InputDecoration(labelText: 'Description'),
               ),
-              DropdownButtonFormField<String>(
-                value: status,
-                decoration: InputDecoration(labelText: 'Status'),
-                items: ['Free', 'Busy'].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (newValue) {
-                  setState(() {
-                    status = newValue!;
-                  });
-                },
+              Row(
+                children: [
+                  Text('Status: '),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.circle,
+                        color: Colors.red,
+                        size: 10,
+                      ),
+                      SizedBox(width: 5),
+                      Text('Busy'),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
@@ -135,26 +172,30 @@ class _CalendarGridState extends State<CalendarGrid> {
             TextButton(
               child: Text('Cancel'),
               onPressed: () {
-                Navigator.of(context).pop();
+                _showDiscardDialog(context);
               },
             ),
             TextButton(
               child: Text('Add'),
               onPressed: () {
-                setState(() {
-                  _events.putIfAbsent(
-                    _highlightedDate!,
-                    () => [],
-                  ).add(
-                    Event(
-                      titleController.text,
-                      descriptionController.text,
-                      status,
-                    ),
-                  );
-                });
-                Navigator.of(context).pop();
-                _updateSelectedDateEvents();
+                if (titleController.text.isEmpty || descriptionController.text.isEmpty) {
+                  _showWarningDialog(context);
+                } else {
+                  setState(() {
+                    _events.putIfAbsent(
+                      _highlightedDate!,
+                      () => [],
+                    ).add(
+                      Event(
+                        titleController.text,
+                        descriptionController.text,
+                        status,
+                      ),
+                    );
+                  });
+                  Navigator.of(context).pop();
+                  _updateSelectedDateEvents();
+                }
               },
             ),
           ],
@@ -169,6 +210,7 @@ class _CalendarGridState extends State<CalendarGrid> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Discard this event?'),
+          content: Text('Are you sure you want to discard this event?'),
           actions: [
             TextButton(
               child: Text('Keep Editing'),
@@ -179,7 +221,27 @@ class _CalendarGridState extends State<CalendarGrid> {
             TextButton(
               child: Text('Discard'),
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(context).pop(); // Close discard confirmation dialog
+                Navigator.of(context).pop(); // Close add event dialog
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showWarningDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Incomplete Information'),
+          content: Text('Event title and description are required.'),
+          actions: [
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
@@ -212,20 +274,21 @@ class _CalendarGridState extends State<CalendarGrid> {
                 controller: descriptionController,
                 decoration: InputDecoration(labelText: 'Description'),
               ),
-              DropdownButtonFormField<String>(
-                value: status,
-                decoration: InputDecoration(labelText: 'Status'),
-                items: ['Free', 'Busy'].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (newValue) {
-                  setState(() {
-                    status = newValue!;
-                  });
-                },
+              Row(
+                children: [
+                  Text('Status: '),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.circle,
+                        color: Colors.red,
+                        size: 10,
+                      ),
+                      SizedBox(width: 5),
+                      Text('Busy'),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
@@ -246,6 +309,36 @@ class _CalendarGridState extends State<CalendarGrid> {
                 });
                 Navigator.of(context).pop();
                 _updateSelectedDateEvents();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showDeleteConfirmationDialog(Event event) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete Event'),
+          content: Text('Are you sure you want to delete this event?'),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Delete'),
+              onPressed: () {
+                setState(() {
+                  _events[_highlightedDate]?.remove(event);
+                  _selectedDateEvents.remove(event);
+                });
+                Navigator.of(context).pop();
               },
             ),
           ],
@@ -412,14 +505,14 @@ class _CalendarGridState extends State<CalendarGrid> {
               ListTile(
                 title: Text('Light Theme'),
                 onTap: () {
-                  _setTheme(AppTheme.Light);
+                  widget.toggleTheme(AppTheme.Light);
                   Navigator.of(context).pop();
                 },
               ),
               ListTile(
                 title: Text('Dark Theme'),
                 onTap: () {
-                  _setTheme(AppTheme.Dark);
+                  widget.toggleTheme(AppTheme.Dark);
                   Navigator.of(context).pop();
                 },
               ),
@@ -430,18 +523,12 @@ class _CalendarGridState extends State<CalendarGrid> {
     );
   }
 
-  void _setTheme(AppTheme themeMode) {
-    setState(() {
-      _currentTheme = themeMode;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.red[200],
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         shadowColor: Colors.transparent,
         leading: Builder(
           builder: (BuildContext context) {
@@ -501,104 +588,72 @@ class _CalendarGridState extends State<CalendarGrid> {
               },
             ),
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  spreadRadius: 0.1,
-                  blurRadius: 7,
-                  offset: const Offset(0, 7.75),
+          Expanded(
+            flex: 4, // Adjust the flex value to make this container longer
+            child: Container(
+              padding: const EdgeInsets.all(10.0), // Adjust padding to make the container larger
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
                 ),
-              ],
-            ),
-            child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              padding: EdgeInsets.zero,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 7,
-                childAspectRatio: 1.0, // Adjust the aspect ratio to control the size
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    spreadRadius: 0.1,
+                    blurRadius: 7,
+                    offset: const Offset(0, 7.75),
+                  ),
+                ],
               ),
-              itemCount: listOfDatesInMonth(_selectedDate).length + indexOfFirstDayMonth,
-              itemBuilder: (BuildContext context, int index) {
-                DateTime currentDate = DateTime(
-                  _selectedDate.year,
-                  _selectedDate.month,
-                  index + 1 - indexOfFirstDayMonth,
-                );
-                List<Event>? events = _events[currentDate];
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 7,
+                ),
+                itemCount: listOfDatesInMonth(_selectedDate).length + indexOfFirstDayMonth,
+                itemBuilder: (BuildContext context, int index) {
+                  DateTime currentDate = DateTime(
+                    _selectedDate.year,
+                    _selectedDate.month,
+                    index + 1 - indexOfFirstDayMonth,
+                  );
+                  List<Event>? events = _events[currentDate];
 
-                return Padding(
-                  padding: const EdgeInsets.all(4.0), // Adjust padding to control spacing
-                  child: GestureDetector(
+                  return GestureDetector(
                     onTap: () {
                       if (index >= indexOfFirstDayMonth) {
                         _onDateTap(currentDate);
                       }
                     },
-                    child: Stack(
-                      children: [
-                        Container(
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: currentDate == _highlightedDate
-                                ? const Color(0xFFFD00F0F)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(50),
+                    child: Container(
+                      alignment: Alignment.center,
+                      margin: const EdgeInsets.all(4.0), // Add margin around each date container
+                      decoration: BoxDecoration(
+                        color: currentDate == _highlightedDate ? Colors.red : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            index >= indexOfFirstDayMonth ? '${index + 1 - indexOfFirstDayMonth}' : '',
+                            style: TextStyle(
+                              color: currentDate == _highlightedDate ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color,
+                            ),
                           ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              index < indexOfFirstDayMonth
-                                  ? const Text("")
-                                  : Text(
-                                      '${index + 1 - indexOfFirstDayMonth}',
-                                      style: TextStyle(
-                                        color: currentDate == _highlightedDate
-                                            ? Colors.white
-                                            : index % 7 == 6
-                                                ? Colors.redAccent
-                                                : Colors.black,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                              if (events != null && events.isNotEmpty)
-                                ...events.take(1).map((event) {
-                                  return Text(
-                                    event.title,
-                                    style: TextStyle(
-                                      color: currentDate == _highlightedDate
-                                          ? Colors.white
-                                          : Colors.black,
-                                      fontSize: 10,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  );
-                                }).toList(),
-                              if (events != null && events.length > 1)
-                                Text(
-                                  '+${events.length - 1} more',
-                                  style: TextStyle(
-                                    color: currentDate == _highlightedDate
-                                        ? Colors.white
-                                        : Colors.black,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
+                          if (events != null && events.isNotEmpty)
+                            Icon(
+                              Icons.circle,
+                              color: Colors.red,
+                              size: 5,
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
           SizedBox(height: 10), // Add space between calendar grid and button
@@ -612,6 +667,7 @@ class _CalendarGridState extends State<CalendarGrid> {
             ),
           ),
           Expanded(
+            flex: 3, // Adjust the flex value to allocate space for events list
             child: _highlightedDate != null && _selectedDateEvents.isNotEmpty
                 ? ListView.builder(
                     itemCount: _selectedDateEvents.length,
@@ -632,10 +688,7 @@ class _CalendarGridState extends State<CalendarGrid> {
                             IconButton(
                               icon: Icon(Icons.delete),
                               onPressed: () {
-                                setState(() {
-                                  _events[_highlightedDate]?.remove(event);
-                                  _selectedDateEvents.remove(event);
-                                });
+                                _showDeleteConfirmationDialog(event);
                               },
                             ),
                           ],
@@ -646,7 +699,7 @@ class _CalendarGridState extends State<CalendarGrid> {
                 : Center(
                     child: Text(
                       _highlightedDate == null
-                          ? 'Select a date to view events'
+                          ? 'Select a date to add and view events'
                           : 'No events for this date',
                       style: TextStyle(fontSize: 16),
                     ),
@@ -675,16 +728,14 @@ class _CalendarGridState extends State<CalendarGrid> {
                     userName,
                     style: TextStyle(
                       color: Colors.black,
-                      fontSize: 18,
-                    ),
+                      fontSize: 18),
                   ),
                   SizedBox(height: 5),
                   Text(
                     userEmail,
                     style: TextStyle(
                       color: Colors.black,
-                      fontSize: 14,
-                    ),
+                      fontSize: 14),
                   ),
                 ],
               ),
@@ -694,10 +745,23 @@ class _CalendarGridState extends State<CalendarGrid> {
               title: Text('Edit Profile'),
               onTap: _editProfile,
             ),
-            ListTile(
+            ExpansionTile(
               leading: Icon(Icons.settings),
               title: Text('Settings'),
-              onTap: _openSettings,
+              children: [
+                ListTile(
+                  title: Text('Light Mode'),
+                  onTap: () {
+                    widget.toggleTheme(AppTheme.Light);
+                  },
+                ),
+                ListTile(
+                  title: Text('Dark Mode'),
+                  onTap: () {
+                    widget.toggleTheme(AppTheme.Dark);
+                  },
+                ),
+              ],
             ),
             ListTile(
               leading: Icon(Icons.help),
@@ -714,7 +778,7 @@ class _CalendarGridState extends State<CalendarGrid> {
               title: Text('Home'),
               onTap: () {
                 Navigator.pop(context); // Close the drawer
-            },
+              },
             ),
           ],
         ),
@@ -722,7 +786,7 @@ class _CalendarGridState extends State<CalendarGrid> {
     );
   }
 
-  List<String> daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  List<String> daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   List<DateTime> listOfDatesInMonth(DateTime selectedDate) {
     DateTime firstDayOfMonth = DateTime(selectedDate.year, selectedDate.month, 1);
@@ -739,6 +803,8 @@ class _CalendarGridState extends State<CalendarGrid> {
   }
 
   int getIndexOfFirstDayInMonth(DateTime selectedDate) {
-    return DateTime(selectedDate.year, selectedDate.month, 1).weekday - 1;
+    // Adjust the calculation to handle Sunday as the first day of the week
+    int weekday = DateTime(selectedDate.year, selectedDate.month, 1).weekday;
+    return (weekday % 7); // This shifts Sunday (weekday == 7) to index 0
   }
 }
