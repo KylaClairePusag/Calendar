@@ -368,6 +368,19 @@ class _CalendarGridState extends State<CalendarGrid> {
     final List<Widget> cells = [];
     final int daysInMonth = DateUtils.getDaysInMonth(_selectedDate.year, _selectedDate.month);
 
+    // Add days of the week headers (Sunday to Saturday)
+    final List<String> daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    for (var day in daysOfWeek) {
+      cells.add(
+        Center(
+          child: Text(
+            day,
+            style: TextStyle(fontWeight: FontWeight.bold,fontSize: 16, color: Colors.red),
+          ),
+        ),
+      );
+    }
+
     for (int i = 0; i < indexOfFirstDayMonth; i++) {
       cells.add(Container());
     }
@@ -384,9 +397,7 @@ class _CalendarGridState extends State<CalendarGrid> {
           onTap: () => _onDateTap(date),
           child: Container(
             decoration: BoxDecoration(
-              color: isSelected
-                  ? Colors.red[200]
-                  : Colors.transparent,
+              color: isSelected ? Colors.red[200] : Colors.transparent,
               borderRadius: BorderRadius.circular(10.0),
             ),
             child: Stack(
@@ -427,7 +438,7 @@ class _CalendarGridState extends State<CalendarGrid> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Calendar App'),
+        title: const Text('Prime Scheduler App'),
         actions: [
           PopupMenuButton<AppTheme>(
             onSelected: widget.toggleTheme,
@@ -484,6 +495,7 @@ class _CalendarGridState extends State<CalendarGrid> {
           if (_highlightedDate != null)
             Container(
               padding: const EdgeInsets.all(8.0),
+              height: _selectedDateEvents.length > 3 ? 250.0 : null,
               child: Column(
                 children: [
                   Text(
@@ -492,8 +504,7 @@ class _CalendarGridState extends State<CalendarGrid> {
                   ),
                   const SizedBox(height: 8.0),
                   _selectedDateEvents.isNotEmpty
-                      ? SizedBox(
-                          height: 200, // Set a fixed height for the event list
+                      ? Expanded(
                           child: ListView.builder(
                             shrinkWrap: true,
                             itemCount: _selectedDateEvents.length,
@@ -546,8 +557,29 @@ class _CalendarGridState extends State<CalendarGrid> {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.calendar_today),
-              title: Text('Calendar'),
+              leading: Icon(Icons.person),
+              title: Text('Edit Profile'),
+              onTap: () {
+                _showEditProfileDialog();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.help),
+              title: Text('Help and Support'),
+              onTap: () {
+                _showHelpAndSupportDialog();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.info),
+              title: Text('About'),
+              onTap: () {
+                _showAboutDialog();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.home),
+              title: Text('Home'),
               onTap: () {
                 Navigator.pop(context); // Close the drawer
               },
@@ -556,5 +588,109 @@ class _CalendarGridState extends State<CalendarGrid> {
         ),
       ),
     );
+  }
+
+  void _showEditProfileDialog() {
+    TextEditingController nameController = TextEditingController(text: userName);
+    TextEditingController emailController = TextEditingController(text: userEmail);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Edit Profile'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(labelText: 'Name'),
+              ),
+              TextField(
+                controller: emailController,
+                decoration: InputDecoration(labelText: 'Email'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Save'),
+              onPressed: () {
+                setState(() {
+                  userName = nameController.text;
+                  userEmail = emailController.text;
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showHelpAndSupportDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Help and Support'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Contact us at primescheduler@help.com'),
+              Text('Visit our PrimeScheduler site for common questions.'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showAboutDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('About'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Prime Scheduler App'),
+              Text('Version 1.0.0'),
+              Text('Developed by Group 9'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class DateUtils {
+  static int getDaysInMonth(int year, int month) {
+    return DateTime(year, month + 1, 0).day;
   }
 }
