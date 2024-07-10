@@ -158,6 +158,7 @@ class _CalendarGridState extends State<CalendarGrid> {
                         Icons.circle,
                         color: Colors.red,
                         size: 10,
+                        
                       ),
                       SizedBox(width: 5),
                       Text('Busy'),
@@ -501,6 +502,7 @@ class _CalendarGridState extends State<CalendarGrid> {
           ),
           if (_highlightedDate != null)
             Container(
+              height: 210,
               padding: const EdgeInsets.all(8.0),
               child: Column(
                 children: [
