@@ -365,82 +365,96 @@ class _CalendarGridState extends State<CalendarGrid> {
     return firstDay.weekday % 7;
   }
 
-  List<Widget> _buildCalendar() {
-    final List<Widget> cells = [];
-    final List<String> daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    final int daysInMonth = DateUtils.getDaysInMonth(_selectedDate.year, _selectedDate.month);
+List<Widget> _buildCalendar() {
+  final List<Widget> cells = [];
+  final List<String> daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  final int daysInMonth = DateUtils.getDaysInMonth(_selectedDate.year, _selectedDate.month);
 
-    // Add headers for days of the week
-    for (int i = 0; i < daysOfWeek.length; i++) {
-      cells.add(
-        Container(
-          alignment: Alignment.center,
-          padding: EdgeInsets.all(8.0),
-          child: Text(
-            daysOfWeek[i],
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.red,
-            ),
+  // Add headers for days of the week
+  for (int i = 0; i < daysOfWeek.length; i++) {
+    cells.add(
+      Container(
+        alignment: Alignment.center,
+        padding: EdgeInsets.all(8.0),
+        child: Text(
+          daysOfWeek[i],
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.red,
           ),
         ),
-      );
-    }
+      ),
+    );
+  }
 
-    // Add empty cells for preceding days
-    for (int i = 0; i < indexOfFirstDayMonth; i++) {
-      cells.add(Container());
-    }
+  // Add empty cells for preceding days
+  for (int i = 0; i < indexOfFirstDayMonth; i++) {
+    cells.add(Container());
+  }
 
-    // Add cells for each day of the month
-    for (int day = 1; day <= daysInMonth; day++) {
-      final date = DateTime(_selectedDate.year, _selectedDate.month, day);
-      final bool isToday = date.year == DateTime.now().year &&
-          date.month == DateTime.now().month &&
-          date.day == DateTime.now().day;
-      final bool isSelected = date == _highlightedDate;
+  // Add cells for each day of the month
+  for (int day = 1; day <= daysInMonth; day++) {
+    final date = DateTime(_selectedDate.year, _selectedDate.month, day);
+    final bool isToday = date.year == DateTime.now().year &&
+        date.month == DateTime.now().month &&
+        date.day == DateTime.now().day;
+    final bool isSelected = date == _highlightedDate;
 
-      cells.add(
-        GestureDetector(
-          onTap: () => _onDateTap(date),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isSelected ? Colors.red[200] : Colors.transparent,
-              borderRadius: BorderRadius.circular(10.0),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (isToday)
-                  Positioned(
-                    top: 4,
-                    right: 4,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
+    // Determine if the date has events
+    bool hasEvents = _events.containsKey(date) && _events[date]!.isNotEmpty;
+
+    cells.add(
+      GestureDetector(
+        onTap: () => _onDateTap(date),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.red[200] : Colors.transparent,
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              if (hasEvents) // Show red dot indicator if there are events
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
                     ),
                   ),
-                Text(
-                  day.toString(),
-                  style: TextStyle(
-                    fontSize: 16.0,
-                    fontWeight: FontWeight.bold,
-                    color: isToday ? Colors.red : null,
+                ),
+              if (isToday)
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Container(
+                    width: 10,
+                    height: 10,
                   ),
                 ),
-              ],
-            ),
+              Text(
+                day.toString(),
+                style: TextStyle(
+                  fontSize: 16.0,
+                  fontWeight: FontWeight.bold,
+                  color: isToday ? Colors.red : null,
+                ),
+              ),
+            ],
           ),
         ),
-      );
-    }
-
-    return cells;
+      ),
+    );
   }
+
+  return cells;
+}
+
+
 
   @override
   Widget build(BuildContext context) {
