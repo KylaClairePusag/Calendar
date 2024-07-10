@@ -366,25 +366,32 @@ class _CalendarGridState extends State<CalendarGrid> {
 
   List<Widget> _buildCalendar() {
     final List<Widget> cells = [];
+    final List<String> daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     final int daysInMonth = DateUtils.getDaysInMonth(_selectedDate.year, _selectedDate.month);
 
-    // Add days of the week headers (Sunday to Saturday)
-    final List<String> daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    for (var day in daysOfWeek) {
+    // Add headers for days of the week
+    for (int i = 0; i < daysOfWeek.length; i++) {
       cells.add(
-        Center(
+        Container(
+          alignment: Alignment.center,
+          padding: EdgeInsets.all(8.0),
           child: Text(
-            day,
-            style: TextStyle(fontWeight: FontWeight.bold,fontSize: 16, color: Colors.red),
+            daysOfWeek[i],
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
           ),
         ),
       );
     }
 
+    // Add empty cells for preceding days
     for (int i = 0; i < indexOfFirstDayMonth; i++) {
       cells.add(Container());
     }
 
+    // Add cells for each day of the month
     for (int day = 1; day <= daysInMonth; day++) {
       final date = DateTime(_selectedDate.year, _selectedDate.month, day);
       final bool isToday = date.year == DateTime.now().year &&
@@ -495,7 +502,6 @@ class _CalendarGridState extends State<CalendarGrid> {
           if (_highlightedDate != null)
             Container(
               padding: const EdgeInsets.all(8.0),
-              height: _selectedDateEvents.length > 3 ? 250.0 : null,
               child: Column(
                 children: [
                   Text(
@@ -504,7 +510,8 @@ class _CalendarGridState extends State<CalendarGrid> {
                   ),
                   const SizedBox(height: 8.0),
                   _selectedDateEvents.isNotEmpty
-                      ? Expanded(
+                      ? SizedBox(
+                          height: 200, // Set a fixed height for the event list
                           child: ListView.builder(
                             shrinkWrap: true,
                             itemCount: _selectedDateEvents.length,
@@ -560,21 +567,73 @@ class _CalendarGridState extends State<CalendarGrid> {
               leading: Icon(Icons.person),
               title: Text('Edit Profile'),
               onTap: () {
-                _showEditProfileDialog();
+                setState(() {
+                  // Update user profile here
+                  userName = "New Name";
+                  userEmail = "newemail@example.com";
+                });
+                Navigator.pop(context); // Close the drawer
               },
             ),
             ListTile(
               leading: Icon(Icons.help),
-              title: Text('Help and Support'),
+              title: Text('Help & Support'),
               onTap: () {
-                _showHelpAndSupportDialog();
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: Text('Help & Support'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Contact us at primescheduler@help.com'),
+                          Text('Visit our PrimeScheduler site for common questions.'),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          child: Text('Close'),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                );
               },
             ),
             ListTile(
               leading: Icon(Icons.info),
               title: Text('About'),
               onTap: () {
-                _showAboutDialog();
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: Text('About'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Prime Scheduler App'),
+                          Text('Version 1.0.0'),
+                          Text('Developed by Group 9'),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          child: Text('Close'),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                );
               },
             ),
             ListTile(
@@ -582,109 +641,12 @@ class _CalendarGridState extends State<CalendarGrid> {
               title: Text('Home'),
               onTap: () {
                 Navigator.pop(context); // Close the drawer
+                // Optionally, you can navigate to the calendar view here
               },
             ),
           ],
         ),
       ),
-    );
-  }
-
-  void _showEditProfileDialog() {
-    TextEditingController nameController = TextEditingController(text: userName);
-    TextEditingController emailController = TextEditingController(text: userEmail);
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Edit Profile'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(labelText: 'Name'),
-              ),
-              TextField(
-                controller: emailController,
-                decoration: InputDecoration(labelText: 'Email'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: Text('Save'),
-              onPressed: () {
-                setState(() {
-                  userName = nameController.text;
-                  userEmail = emailController.text;
-                });
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showHelpAndSupportDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Help and Support'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Contact us at primescheduler@help.com'),
-              Text('Visit our PrimeScheduler site for common questions.'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showAboutDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('About'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Prime Scheduler App'),
-              Text('Version 1.0.0'),
-              Text('Developed by Group 9'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
     );
   }
 }
