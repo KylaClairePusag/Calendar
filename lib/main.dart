@@ -511,7 +511,7 @@ class _CalendarGridState extends State<CalendarGrid> {
                   const SizedBox(height: 8.0),
                   _selectedDateEvents.isNotEmpty
                       ? SizedBox(
-                          height: 200, // Set a fixed height for the event list
+                          height: 150, // Set a fixed height for the event list
                           child: ListView.builder(
                             shrinkWrap: true,
                             itemCount: _selectedDateEvents.length,
