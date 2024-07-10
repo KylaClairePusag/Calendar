@@ -567,12 +567,7 @@ class _CalendarGridState extends State<CalendarGrid> {
               leading: Icon(Icons.person),
               title: Text('Edit Profile'),
               onTap: () {
-                setState(() {
-                  // Update user profile here
-                  userName = "New Name";
-                  userEmail = "newemail@example.com";
-                });
-                Navigator.pop(context); // Close the drawer
+                _navigateToProfileScreen(context); // Navigate to edit profile screen
               },
             ),
             ListTile(
@@ -648,6 +643,101 @@ class _CalendarGridState extends State<CalendarGrid> {
         ),
       ),
     );
+  }
+
+  void _navigateToProfileScreen(BuildContext context) {
+    Navigator.pop(context); // Close the drawer
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProfileScreen(
+          userName: userName,
+          userEmail: userEmail,
+          onUpdateProfile: _updateProfile,
+        ),
+      ),
+    );
+  }
+
+  void _updateProfile(String newUserName, String newUserEmail) {
+    setState(() {
+      userName = newUserName;
+      userEmail = newUserEmail;
+    });
+  }
+}
+
+class ProfileScreen extends StatefulWidget {
+  final String userName;
+  final String userEmail;
+  final Function(String, String) onUpdateProfile;
+
+  const ProfileScreen({
+    Key? key,
+    required this.userName,
+    required this.userEmail,
+    required this.onUpdateProfile,
+  }) : super(key: key);
+
+  @override
+  _ProfileScreenState createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.userName);
+    _emailController = TextEditingController(text: widget.userEmail);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Edit Profile'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(labelText: 'Name'),
+            ),
+            TextField(
+              controller: _emailController,
+              decoration: InputDecoration(labelText: 'Email'),
+            ),
+            SizedBox(height: 16.0),
+            ElevatedButton(
+              onPressed: () {
+                _updateProfile();
+              },
+              child: Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _updateProfile() {
+    String newName = _nameController.text;
+    String newEmail = _emailController.text;
+    widget.onUpdateProfile(newName, newEmail);
+    Navigator.of(context).pop(); // Close the profile screen
   }
 }
 
