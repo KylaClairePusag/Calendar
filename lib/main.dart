@@ -108,8 +108,10 @@ class _CalendarGridState extends State<CalendarGrid> {
   }
 
   void _initializeSelectedIndex() {
+    _highlightedDate = DateTime.now();
     indexOfFirstDayMonth = getIndexOfFirstDayInMonth(_selectedDate);
-    _selectedIndex = indexOfFirstDayMonth + int.parse(DateFormat('d').format(_selectedDate)) - 1;
+    _selectedIndex = indexOfFirstDayMonth + int.parse(DateFormat('d').format(_highlightedDate!)) - 1;
+    _updateSelectedDateEvents();
   }
 
   void _goToPreviousMonth() {
