@@ -372,6 +372,12 @@ List<Widget> _buildCalendar() {
   final List<String> daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   final int daysInMonth = DateUtils.getDaysInMonth(_selectedDate.year, _selectedDate.month);
 
+  // Calculate previous month's days
+  DateTime previousMonthDate = DateTime(_selectedDate.year, _selectedDate.month - 1, 1);
+  int daysInPreviousMonth = DateUtils.getDaysInMonth(previousMonthDate.year, previousMonthDate.month);
+  int indexOfFirstDayMonth = getIndexOfFirstDayInMonth(_selectedDate);
+  int remainingDaysInPreviousMonth = indexOfFirstDayMonth;
+
   // Add headers for days of the week
   for (int i = 0; i < daysOfWeek.length; i++) {
     cells.add(
@@ -389,12 +395,25 @@ List<Widget> _buildCalendar() {
     );
   }
 
-  // Add empty cells for preceding days
+  // Add empty cells for preceding days of the current month
   for (int i = 0; i < indexOfFirstDayMonth; i++) {
-    cells.add(Container());
+    cells.add(
+      Container(
+        alignment: Alignment.center,
+        padding: EdgeInsets.all(8.0),
+        child: Text(
+          '${daysInPreviousMonth - remainingDaysInPreviousMonth + i + 1}',
+          style: TextStyle(
+            fontSize: 16.0,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey.withOpacity(0.5),
+          ),
+        ),
+      ),
+    );
   }
 
-  // Add cells for each day of the month
+  // Add cells for each day of the current month
   for (int day = 1; day <= daysInMonth; day++) {
     final date = DateTime(_selectedDate.year, _selectedDate.month, day);
     final bool isToday = date.year == DateTime.now().year &&
@@ -411,6 +430,10 @@ List<Widget> _buildCalendar() {
         child: Container(
           decoration: BoxDecoration(
             color: isSelected ? Colors.red[200] : Colors.transparent,
+            border: Border.all(
+              color: Colors.grey.withOpacity(0.5),
+              width: 1.0,
+            ),
             borderRadius: BorderRadius.circular(10.0),
           ),
           child: Stack(
@@ -453,8 +476,29 @@ List<Widget> _buildCalendar() {
     );
   }
 
+  // Calculate next month's days
+  int remainingDaysInNextMonth = 7 - (cells.length % 7);
+  for (int i = 0; i < remainingDaysInNextMonth; i++) {
+    cells.add(
+      Container(
+        alignment: Alignment.center,
+        padding: EdgeInsets.all(8.0),
+        child: Text(
+          '${i + 1}',
+          style: TextStyle(
+            fontSize: 16.0,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey.withOpacity(0.5),
+          ),
+        ),
+      ),
+    );
+  }
+
   return cells;
 }
+
+
 
 
 
@@ -518,7 +562,7 @@ List<Widget> _buildCalendar() {
           ),
           if (_highlightedDate != null)
             Container(
-              height: 210,
+              height: 197,
               padding: const EdgeInsets.all(8.0),
               child: Column(
                 children: [
