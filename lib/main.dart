@@ -77,10 +77,12 @@ class _MyAppState extends State<MyApp> {
 class Event {
   String title;
   String description;
+  DateTime date;
   String status;
 
-  Event(this.title, this.description, this.status);
+  Event(this.title, this.description, this.date, this.status);
 }
+
 
 class CalendarGrid extends StatefulWidget {
   final Function(AppTheme) toggleTheme;
@@ -128,76 +130,142 @@ class _CalendarGridState extends State<CalendarGrid> {
     });
   }
 
-  void _addEvent() {
-    if (_highlightedDate == null) return;
+void _addEvent() {
+  if (_highlightedDate == null) return;
 
-    TextEditingController titleController = TextEditingController();
-    TextEditingController descriptionController = TextEditingController();
-    String status = 'Busy'; // Default status to 'Busy'
+  TextEditingController titleController = TextEditingController();
+  TextEditingController descriptionController = TextEditingController();
+  String status = 'Busy'; // Default status to 'Busy'
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Add Event'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: InputDecoration(labelText: 'Title'),
+            ),
+            TextField(
+              controller: descriptionController,
+              decoration: InputDecoration(labelText: 'Description'),
+            ),
+            Row(
+              children: [
+                Text('Status: '),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.circle,
+                      color: Colors.red,
+                      size: 10,
+                    ),
+                    SizedBox(width: 5),
+                    Text('Busy'),
+                  ],
+                ),
+              ],
+            ),
+            // Add DatePicker for selecting event date
+            TextButton(
+              onPressed: () async {
+                DateTime? pickedDate = await showDatePicker(
+                  context: context,
+                  initialDate: _highlightedDate ?? DateTime.now(),
+                  firstDate: DateTime.now(),
+                  lastDate: DateTime(DateTime.now().year + 5),
+                );
+                if (pickedDate != null) {
+                  setState(() {
+                    _highlightedDate = pickedDate;
+                  });
+                }
+              },
+              child: Text(
+                'Pick Date',
+                style: TextStyle(color: Colors.blue),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            child: Text('Cancel'),
+            onPressed: () {
+              _showDiscardDialog(context);
+            },
+          ),
+          TextButton(
+            child: Text('Add'),
+            onPressed: () {
+              if (titleController.text.isEmpty || descriptionController.text.isEmpty) {
+                _showWarningDialog(context);
+              } else {
+                setState(() {
+                  _events.putIfAbsent(
+                    _highlightedDate!,
+                    () => [],
+                  ).add(
+                    Event(
+                      titleController.text,
+                      descriptionController.text,
+                      _highlightedDate!,
+                      'Busy'                      
+                    ),
+                  );
+                });
+                Navigator.of(context).pop();
+                _updateSelectedDateEvents();
+              }
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
+  // Method to retrieve all upcoming events
+  List<Event> _getAllUpcomingEvents() {
+    List<Event> upcomingEvents = [];
+
+    _events.forEach((date, events) {
+      upcomingEvents.addAll(events);
+    });
+
+    // Sort events by date if events have date field
+    upcomingEvents.sort((a, b) => a.date.compareTo(b.date));
+
+    return upcomingEvents;
+  }
+
+  // Method to navigate to Upcoming Events screen
+  void _navigateToUpcomingEvents(BuildContext context) {
+    List<Event> upcomingEvents = _getAllUpcomingEvents();
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Add Event'),
+          title: Text('Upcoming Events'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: InputDecoration(labelText: 'Title'),
-              ),
-              TextField(
-                controller: descriptionController,
-                decoration: InputDecoration(labelText: 'Description'),
-              ),
-              Row(
-                children: [
-                  Text('Status: '),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.circle,
-                        color: Colors.red,
-                        size: 10,
-                        
-                      ),
-                      SizedBox(width: 5),
-                      Text('Busy'),
-                    ],
-                  ),
-                ],
-              ),
-            ],
+            children: upcomingEvents.map((event) {
+              return ListTile(
+                title: Text(event.title),
+                subtitle: Text(event.description),
+                trailing: Text(DateFormat.yMMMd().format(event.date)),
+              );
+            }).toList(),
           ),
           actions: [
             TextButton(
-              child: Text('Cancel'),
+              child: Text('Close'),
               onPressed: () {
-                _showDiscardDialog(context);
-              },
-            ),
-            TextButton(
-              child: Text('Add'),
-              onPressed: () {
-                if (titleController.text.isEmpty || descriptionController.text.isEmpty) {
-                  _showWarningDialog(context);
-                } else {
-                  setState(() {
-                    _events.putIfAbsent(
-                      _highlightedDate!,
-                      () => [],
-                    ).add(
-                      Event(
-                        titleController.text,
-                        descriptionController.text,
-                        status,
-                      ),
-                    );
-                  });
-                  Navigator.of(context).pop();
-                  _updateSelectedDateEvents();
-                }
+                Navigator.of(context).pop();
               },
             ),
           ],
@@ -205,7 +273,6 @@ class _CalendarGridState extends State<CalendarGrid> {
       },
     );
   }
-
   void _showDiscardDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -372,6 +439,12 @@ List<Widget> _buildCalendar() {
   final List<String> daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   final int daysInMonth = DateUtils.getDaysInMonth(_selectedDate.year, _selectedDate.month);
 
+  // Calculate previous month's days
+  DateTime previousMonthDate = DateTime(_selectedDate.year, _selectedDate.month - 1, 1);
+  int daysInPreviousMonth = DateUtils.getDaysInMonth(previousMonthDate.year, previousMonthDate.month);
+  int indexOfFirstDayMonth = getIndexOfFirstDayInMonth(_selectedDate);
+  int remainingDaysInPreviousMonth = indexOfFirstDayMonth;
+
   // Add headers for days of the week
   for (int i = 0; i < daysOfWeek.length; i++) {
     cells.add(
@@ -389,12 +462,25 @@ List<Widget> _buildCalendar() {
     );
   }
 
-  // Add empty cells for preceding days
+  // Add empty cells for preceding days of the current month
   for (int i = 0; i < indexOfFirstDayMonth; i++) {
-    cells.add(Container());
+    cells.add(
+      Container(
+        alignment: Alignment.center,
+        padding: EdgeInsets.all(8.0),
+        child: Text(
+          '${daysInPreviousMonth - remainingDaysInPreviousMonth + i + 1}',
+          style: TextStyle(
+            fontSize: 16.0,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey.withOpacity(0.5),
+          ),
+        ),
+      ),
+    );
   }
 
-  // Add cells for each day of the month
+  // Add cells for each day of the current month
   for (int day = 1; day <= daysInMonth; day++) {
     final date = DateTime(_selectedDate.year, _selectedDate.month, day);
     final bool isToday = date.year == DateTime.now().year &&
@@ -411,6 +497,10 @@ List<Widget> _buildCalendar() {
         child: Container(
           decoration: BoxDecoration(
             color: isSelected ? Colors.red[200] : Colors.transparent,
+            border: Border.all(
+              color: Colors.grey.withOpacity(0.5),
+              width: 1.0,
+            ),
             borderRadius: BorderRadius.circular(10.0),
           ),
           child: Stack(
@@ -453,8 +543,29 @@ List<Widget> _buildCalendar() {
     );
   }
 
+  // Calculate next month's days
+  int remainingDaysInNextMonth = 7 - (cells.length % 7);
+  for (int i = 0; i < remainingDaysInNextMonth; i++) {
+    cells.add(
+      Container(
+        alignment: Alignment.center,
+        padding: EdgeInsets.all(8.0),
+        child: Text(
+          '${i + 1}',
+          style: TextStyle(
+            fontSize: 16.0,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey.withOpacity(0.5),
+          ),
+        ),
+      ),
+    );
+  }
+
   return cells;
 }
+
+
 
 
 
@@ -518,7 +629,7 @@ List<Widget> _buildCalendar() {
           ),
           if (_highlightedDate != null)
             Container(
-              height: 210,
+              height: 197,
               padding: const EdgeInsets.all(8.0),
               child: Column(
                 children: [
@@ -657,6 +768,13 @@ List<Widget> _buildCalendar() {
                 // Optionally, you can navigate to the calendar view here
               },
             ),
+                  ListTile(
+        leading: Icon(Icons.event),
+        title: Text('Upcoming Events'),
+        onTap: () {
+          _navigateToUpcomingEvents(context);
+        }
+                  )
           ],
         ),
       ),
