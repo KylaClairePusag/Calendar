@@ -699,6 +699,13 @@ List<Widget> _buildCalendar() {
                 _navigateToProfileScreen(context); // Navigate to edit profile screen
               },
             ),
+                              ListTile(
+              leading: Icon(Icons.event),
+              title: Text('Upcoming Events'),
+              onTap: () {
+              _navigateToUpcomingEvents(context);
+              }
+                  ),
             ListTile(
               leading: Icon(Icons.help),
               title: Text('Help & Support'),
@@ -768,13 +775,6 @@ List<Widget> _buildCalendar() {
                 // Optionally, you can navigate to the calendar view here
               },
             ),
-                  ListTile(
-        leading: Icon(Icons.event),
-        title: Text('Upcoming Events'),
-        onTap: () {
-          _navigateToUpcomingEvents(context);
-        }
-                  )
           ],
         ),
       ),
