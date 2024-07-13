@@ -26,17 +26,20 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Calendar App',
-      theme: _buildThemeData(AppTheme.Light), // Set initial light theme
-      darkTheme: _buildThemeData(AppTheme.Dark), // Set dark theme
-      themeMode: _currentTheme == AppTheme.Light ? ThemeMode.light : ThemeMode.dark,
-      debugShowCheckedModeBanner: false, // Remove debug banner
-      home: CalendarGrid(toggleTheme: _toggleTheme),
-    );
-  }
+@override
+Widget build(BuildContext context) {
+  return MaterialApp(
+    title: 'Calendar App',
+    theme: _buildThemeData(AppTheme.Light), // Set initial light theme
+    darkTheme: _buildThemeData(AppTheme.Dark), // Set dark theme
+    themeMode: _currentTheme == AppTheme.Light ? ThemeMode.light : ThemeMode.dark,
+    debugShowCheckedModeBanner: false, // Remove debug banner
+    home: CalendarGrid(
+      currentTheme: _currentTheme,
+      toggleTheme: _toggleTheme,
+    ),
+  );
+}
 
   ThemeData _buildThemeData(AppTheme themeMode) {
     switch (themeMode) {
@@ -85,9 +88,14 @@ class Event {
 
 
 class CalendarGrid extends StatefulWidget {
+  final AppTheme currentTheme;
   final Function(AppTheme) toggleTheme;
 
-  const CalendarGrid({Key? key, required this.toggleTheme}) : super(key: key);
+  const CalendarGrid({
+    Key? key,
+    required this.currentTheme,
+    required this.toggleTheme,
+  }) : super(key: key);
 
   @override
   _CalendarGridState createState() => _CalendarGridState();
@@ -107,6 +115,10 @@ class _CalendarGridState extends State<CalendarGrid> {
   void initState() {
     super.initState();
     _initializeSelectedIndex();
+  }
+
+  Color _getUserAccountsDrawerHeaderColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark ? Colors.red : Colors.red[200]!;
   }
 
   void _initializeSelectedIndex() {
@@ -145,14 +157,17 @@ void _addEvent() {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: titleController,
-              decoration: InputDecoration(labelText: 'Title'),
-            ),
-            TextField(
-              controller: descriptionController,
-              decoration: InputDecoration(labelText: 'Description'),
-            ),
+             TextField(
+               controller: titleController,
+               decoration: InputDecoration(labelText: 'Title'),
+               maxLines: null, // Allow multiline input
+             ),
+             TextField(
+               controller: descriptionController,
+               decoration: InputDecoration(labelText: 'Description'),
+               maxLines: null, // Allow multiline input
+             ),
+
             Row(
               children: [
                 Text('Status: '),
@@ -243,36 +258,39 @@ void _addEvent() {
   }
 
   // Method to navigate to Upcoming Events screen
-  void _navigateToUpcomingEvents(BuildContext context) {
-    List<Event> upcomingEvents = _getAllUpcomingEvents();
+void _navigateToUpcomingEvents(BuildContext context) {
+  List<Event> upcomingEvents = _getAllUpcomingEvents();
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Upcoming Events'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: upcomingEvents.map((event) {
-              return ListTile(
-                title: Text(event.title),
-                subtitle: Text(event.description),
-                trailing: Text(DateFormat.yMMMd().format(event.date)),
-              );
-            }).toList(),
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Upcoming Events'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: upcomingEvents.isNotEmpty
+              ? upcomingEvents.map((event) {
+                  return ListTile(
+                    title: Text(event.title),
+                    subtitle: Text(event.description),
+                    trailing: Text(DateFormat.yMMMd().format(event.date)),
+                  );
+                }).toList()
+              : [Text('No Upcoming Events')],
+        ),
+        actions: [
+          TextButton(
+            child: Text('Close'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
           ),
-          actions: [
-            TextButton(
-              child: Text('Close'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+        ],
+      );
+    },
+  );
+}
+
   void _showDiscardDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -575,19 +593,13 @@ List<Widget> _buildCalendar() {
       appBar: AppBar(
         title: const Text('Prime Scheduler App'),
         actions: [
-          PopupMenuButton<AppTheme>(
-            onSelected: widget.toggleTheme,
-            itemBuilder: (BuildContext context) {
-              return <PopupMenuEntry<AppTheme>>[
-                const PopupMenuItem<AppTheme>(
-                  value: AppTheme.Light,
-                  child: Text('Light Theme'),
-                ),
-                const PopupMenuItem<AppTheme>(
-                  value: AppTheme.Dark,
-                  child: Text('Dark Theme'),
-                ),
-              ];
+          IconButton(
+            icon: widget.currentTheme == AppTheme.Light
+                ? Icon(Icons.wb_sunny) // Light mode icon
+                : Icon(Icons.nightlight_round), // Dark mode icon
+            onPressed: () {
+              // Toggle theme on icon press
+              widget.toggleTheme(widget.currentTheme == AppTheme.Light ? AppTheme.Dark : AppTheme.Light);
             },
           ),
         ],
@@ -678,20 +690,21 @@ List<Widget> _buildCalendar() {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            UserAccountsDrawerHeader(
-              accountName: Text(userName),
-              accountEmail: Text(userEmail),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Text(
+              UserAccountsDrawerHeader(
+                 accountName: Text(userName),
+                 accountEmail: Text(userEmail),
+                 currentAccountPicture: CircleAvatar(
+                 backgroundColor: Colors.white,
+                 child: Text(
                   userName[0],
                   style: TextStyle(fontSize: 40.0),
-                ),
-              ),
-              decoration: BoxDecoration(
-                color: Colors.red[200],
-              ),
-            ),
+                 ),
+                 ),
+                   decoration: BoxDecoration(
+                   color: _getUserAccountsDrawerHeaderColor(context),
+                 ),
+               ),
+
             ListTile(
               leading: Icon(Icons.person),
               title: Text('Edit Profile'),
