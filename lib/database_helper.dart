@@ -59,4 +59,3 @@ class DatabaseHelper {
     return await db.delete('events', where: 'id = ?', whereArgs: [id]);
   }
 }
-
