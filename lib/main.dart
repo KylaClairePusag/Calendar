@@ -266,17 +266,22 @@ void _navigateToUpcomingEvents(BuildContext context) {
     builder: (BuildContext context) {
       return AlertDialog(
         title: Text('Upcoming Events'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: upcomingEvents.isNotEmpty
-              ? upcomingEvents.map((event) {
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (upcomingEvents.isNotEmpty)
+                ...upcomingEvents.map((event) {
                   return ListTile(
                     title: Text(event.title),
                     subtitle: Text(event.description),
                     trailing: Text(DateFormat.yMMMd().format(event.date)),
                   );
-                }).toList()
-              : [Text('No Upcoming Events')],
+                }).toList(),
+              if (upcomingEvents.isEmpty)
+                Text('No Upcoming Events'),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -290,6 +295,8 @@ void _navigateToUpcomingEvents(BuildContext context) {
     },
   );
 }
+
+
 
   void _showDiscardDialog(BuildContext context) {
     showDialog(
