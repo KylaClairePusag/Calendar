@@ -273,10 +273,17 @@ void _navigateToUpcomingEvents(BuildContext context) {
               if (upcomingEvents.isNotEmpty)
                 ...upcomingEvents.map((event) {
                   return ListTile(
-                    title: Text(event.title),
-                    subtitle: Text(event.description),
-                    trailing: Text(DateFormat.yMMMd().format(event.date)),
-                  );
+        title: Text(
+         event.title,
+         style: TextStyle(
+           color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
+           fontWeight: FontWeight.bold,
+                          ),
+                   ),
+           subtitle: Text(event.description),
+           trailing: Text(DateFormat.yMMMd().format(event.date)),
+);
+
                 }).toList(),
               if (upcomingEvents.isEmpty)
                 Text('No Upcoming Events'),
