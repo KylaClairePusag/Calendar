@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "399872564518",
+    "project_id": "prime-scheduler-71ea8",
+    "storage_bucket": "prime-scheduler-71ea8.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:399872564518:android:58c84ddfa12682c36335e7",
+        "android_client_info": {
+          "package_name": "android.permission.INTERNET"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB76xX17dvnHzth_YeRIZSEzyjQbFjbiv8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
