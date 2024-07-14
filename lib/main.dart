@@ -1,8 +1,10 @@
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_core/firebase_core.dart';  // Import Firebase core
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();  // Initialize Firebase
   runApp(const MyApp());
 }
 
@@ -35,7 +37,10 @@ class _MyAppState extends State<MyApp> {
       darkTheme: _buildThemeData(AppTheme.Dark), // Set dark theme
       themeMode: _currentTheme == AppTheme.Light ? ThemeMode.light : ThemeMode.dark,
       debugShowCheckedModeBanner: false, // Remove debug banner
-      home: CalendarGrid(toggleTheme: _toggleTheme),
+      home: CalendarGrid(
+        currentTheme: _currentTheme,
+        toggleTheme: _toggleTheme,
+      ),
     );
   }
 
@@ -78,15 +83,21 @@ class _MyAppState extends State<MyApp> {
 class Event {
   String title;
   String description;
+  DateTime date;
   String status;
 
-  Event(this.title, this.description, this.status);
+  Event(this.title, this.description, this.date, this.status);
 }
 
 class CalendarGrid extends StatefulWidget {
+  final AppTheme currentTheme;
   final Function(AppTheme) toggleTheme;
 
-  const CalendarGrid({Key? key, required this.toggleTheme}) : super(key: key);
+  const CalendarGrid({
+    Key? key,
+    required this.currentTheme,
+    required this.toggleTheme,
+  }) : super(key: key);
 
   @override
   _CalendarGridState createState() => _CalendarGridState();
@@ -108,9 +119,15 @@ class _CalendarGridState extends State<CalendarGrid> {
     _initializeSelectedIndex();
   }
 
+  Color _getUserAccountsDrawerHeaderColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark ? Colors.red : Colors.red[200]!;
+  }
+
   void _initializeSelectedIndex() {
+    _highlightedDate = DateTime.now();
     indexOfFirstDayMonth = getIndexOfFirstDayInMonth(_selectedDate);
-    _selectedIndex = indexOfFirstDayMonth + int.parse(DateFormat('d').format(_selectedDate)) - 1;
+    _selectedIndex = indexOfFirstDayMonth + int.parse(DateFormat('d').format(_highlightedDate!)) - 1;
+    _updateSelectedDateEvents();
   }
 
   void _goToPreviousMonth() {
@@ -127,82 +144,168 @@ class _CalendarGridState extends State<CalendarGrid> {
     });
   }
 
-  void _addEvent() {
-    if (_highlightedDate == null) return;
+void _addEvent() {
+  if (_highlightedDate == null) return;
 
-    TextEditingController titleController = TextEditingController();
-    TextEditingController descriptionController = TextEditingController();
-    String status = 'Busy'; // Default status to 'Busy'
+  TextEditingController titleController = TextEditingController();
+  TextEditingController descriptionController = TextEditingController();
+  String status = 'Busy'; // Default status to 'Busy'
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Add Event'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: InputDecoration(labelText: 'Title'),
-              ),
-              TextField(
-                controller: descriptionController,
-                decoration: InputDecoration(labelText: 'Description'),
-              ),
-              Row(
-                children: [
-                  Text('Status: '),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.circle,
-                        color: Colors.red,
-                        size: 10,
-                      ),
-                      SizedBox(width: 5),
-                      Text('Busy'),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () {
-                _showDiscardDialog(context);
-              },
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Add Event'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+             TextField(
+               controller: titleController,
+               decoration: InputDecoration(labelText: 'Title'),
+               maxLines: null, // Allow multiline input
+             ),
+             TextField(
+               controller: descriptionController,
+               decoration: InputDecoration(labelText: 'Description'),
+               maxLines: null, // Allow multiline input
+             ),
+
+            Row(
+              children: [
+                Text('Status: '),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.circle,
+                      color: Colors.red,
+                      size: 10,
+                    ),
+                    SizedBox(width: 5),
+                    Text('Busy'),
+                  ],
+                ),
+              ],
             ),
+            // Add DatePicker for selecting event date
             TextButton(
-              child: Text('Add'),
-              onPressed: () {
-                if (titleController.text.isEmpty || descriptionController.text.isEmpty) {
-                  _showWarningDialog(context);
-                } else {
+              onPressed: () async {
+                DateTime? pickedDate = await showDatePicker(
+                  context: context,
+                  initialDate: _highlightedDate ?? DateTime.now(),
+                  firstDate: DateTime.now(),
+                  lastDate: DateTime(DateTime.now().year + 5),
+                );
+                if (pickedDate != null) {
                   setState(() {
-                    _events.putIfAbsent(
-                      _highlightedDate!,
-                      () => [],
-                    ).add(
-                      Event(
-                        titleController.text,
-                        descriptionController.text,
-                        status,
-                      ),
-                    );
+                    _highlightedDate = pickedDate;
                   });
-                  Navigator.of(context).pop();
-                  _updateSelectedDateEvents();
                 }
               },
+              child: Text(
+                'Pick Date',
+                style: TextStyle(color: Colors.blue),
+              ),
             ),
           ],
-        );
-      },
-    );
+        ),
+        actions: [
+          TextButton(
+            child: Text('Cancel'),
+            onPressed: () {
+              _showDiscardDialog(context);
+            },
+          ),
+          TextButton(
+            child: Text('Add'),
+            onPressed: () {
+              if (titleController.text.isEmpty || descriptionController.text.isEmpty) {
+                _showWarningDialog(context);
+              } else {
+                setState(() {
+                  _events.putIfAbsent(
+                    _highlightedDate!,
+                    () => [],
+                  ).add(
+                    Event(
+                      titleController.text,
+                      descriptionController.text,
+                      _highlightedDate!,
+                      'Busy'                      
+                    ),
+                  );
+                });
+                Navigator.of(context).pop();
+                _updateSelectedDateEvents();
+              }
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
+  // Method to retrieve all upcoming events
+  List<Event> _getAllUpcomingEvents() {
+    List<Event> upcomingEvents = [];
+
+    _events.forEach((date, events) {
+      upcomingEvents.addAll(events);
+    });
+
+    // Sort events by date if events have date field
+    upcomingEvents.sort((a, b) => a.date.compareTo(b.date));
+
+    return upcomingEvents;
   }
+
+  // Method to navigate to Upcoming Events screen
+void _navigateToUpcomingEvents(BuildContext context) {
+  List<Event> upcomingEvents = _getAllUpcomingEvents();
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Upcoming Events'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (upcomingEvents.isNotEmpty)
+                ...upcomingEvents.map((event) {
+                  return ListTile(
+        title: Text(
+         event.title,
+         style: TextStyle(
+           color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
+           fontWeight: FontWeight.bold,
+                          ),
+                   ),
+           subtitle: Text(event.description),
+           trailing: Text(DateFormat.yMMMd().format(event.date)),
+);
+
+                }).toList(),
+              if (upcomingEvents.isEmpty)
+                Text('No Upcoming Events'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            child: Text('Close'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
+
 
   void _showDiscardDialog(BuildContext context) {
     showDialog(
@@ -356,428 +459,349 @@ class _CalendarGridState extends State<CalendarGrid> {
   }
 
   void _updateSelectedDateEvents() {
-    _selectedDateEvents = _events[_highlightedDate] ?? [];
+    _selectedDateEvents =
+        _events[_highlightedDate] ?? [];
   }
 
-  void _editProfile() {
-    TextEditingController nameController = TextEditingController(text: userName);
-    TextEditingController emailController = TextEditingController(text: userEmail);
+  int getIndexOfFirstDayInMonth(DateTime date) {
+    DateTime firstDay = DateTime(date.year, date.month, 1);
+    return firstDay.weekday % 7;
+  }
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Edit Profile'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(labelText: 'Name'),
-              ),
-              TextField(
-                controller: emailController,
-                decoration: InputDecoration(labelText: 'Email'),
-              ),
-            ],
+List<Widget> _buildCalendar() {
+  final List<Widget> cells = [];
+  final List<String> daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  final int daysInMonth = DateUtils.getDaysInMonth(_selectedDate.year, _selectedDate.month); // Fixed syntax error
+
+  // Calculate previous month's days
+  DateTime previousMonthDate = DateTime(_selectedDate.year, _selectedDate.month - 1, 1);
+  int daysInPreviousMonth = DateUtils.getDaysInMonth(previousMonthDate.year, previousMonthDate.month);
+  int indexOfFirstDayMonth = getIndexOfFirstDayInMonth(_selectedDate);
+  int remainingDaysInPreviousMonth = indexOfFirstDayMonth;
+
+  // Add headers for days of the week
+  for (int i = 0; i < daysOfWeek.length; i++) {
+    cells.add(
+      Container(
+        alignment: Alignment.center,
+        padding: EdgeInsets.all(8.0),
+        child: Text(
+          daysOfWeek[i],
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.red,
           ),
-          actions: [
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: Text('Save'),
-              onPressed: () {
-                setState(() {
-                  userName = nameController.text;
-                  userEmail = emailController.text;
-                });
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
+        ),
+      ),
     );
   }
 
-  void _openSettings() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Settings'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(Icons.palette),
-                title: Text('Theme'),
-                onTap: _showThemeDialog, // Open theme selection dialog
-              ),
-              ListTile(
-                leading: Icon(Icons.notifications),
-                title: Text('Notifications'),
-                onTap: () {
-                  // Handle notification settings
-                },
-              ),
-            ],
+  // Add empty cells for preceding days of the current month
+  for (int i = 0; i < indexOfFirstDayMonth; i++) {
+    cells.add(
+      Container(
+        alignment: Alignment.center,
+        padding: EdgeInsets.all(8.0),
+        child: Text(
+          '${daysInPreviousMonth - remainingDaysInPreviousMonth + i + 1}',
+          style: TextStyle(
+            fontSize: 16.0,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey.withOpacity(0.5),
           ),
-          actions: [
-            TextButton(
-              child: Text('Close'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
+        ),
+      ),
     );
   }
 
-  void _openHelpSupport() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Help & Support'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Contact us at primescheduler@help.com'),
-              Text('Visit our PrimeScheduler site for common questions.'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: Text('Close'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // Add cells for each day of the current month
+  for (int day = 1; day <= daysInMonth; day++) {
+    final date = DateTime(_selectedDate.year, _selectedDate.month, day);
+    final bool isToday = date.year == DateTime.now().year &&
+        date.month == DateTime.now().month &&
+        date.day == DateTime.now().day;
+    final bool isSelected = date == _highlightedDate;
 
-  void _openAbout() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('About'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Prime Scheduler App'),
-              Text('Version 1.0.0'),
-              Text('Developed by Group 9'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: Text('Close'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+    // Determine if the date has events
+    bool hasEvents = _events.containsKey(date) && _events[date]!.isNotEmpty;
 
-  void _showThemeDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Select Theme'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
+    cells.add(
+      GestureDetector(
+        onTap: () => _onDateTap(date),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.red[200] : Colors.transparent,
+            border: Border.all(
+              color: Colors.grey.withOpacity(0.5),
+              width: 1.0,
+            ),
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
             children: [
-              ListTile(
-                title: Text('Light Theme'),
-                onTap: () {
-                  widget.toggleTheme(AppTheme.Light);
-                  Navigator.of(context).pop();
-                },
-              ),
-              ListTile(
-                title: Text('Dark Theme'),
-                onTap: () {
-                  widget.toggleTheme(AppTheme.Dark);
-                  Navigator.of(context).pop();
-                },
+              if (hasEvents) // Show red dot indicator if there are events
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              if (isToday)
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                  ),
+                ),
+              Text(
+                day.toString(),
+                style: TextStyle(
+                  fontSize: 16.0,
+                  fontWeight: FontWeight.bold,
+                  color: isToday ? Colors.red : null,
+                ),
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
+
+  // Calculate next month's days
+  int remainingDaysInNextMonth = 7 - (cells.length % 7);
+  for (int i = 0; i < remainingDaysInNextMonth; i++) {
+    cells.add(
+      Container(
+        alignment: Alignment.center,
+        padding: EdgeInsets.all(8.0),
+        child: Text(
+          '${i + 1}',
+          style: TextStyle(
+            fontSize: 16.0,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey.withOpacity(0.5),
+          ),
+        ),
+      ),
+    );
+  }
+
+  return cells;
+}
+
+
+
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        shadowColor: Colors.transparent,
-        leading: Builder(
-          builder: (BuildContext context) {
-            return IconButton(
-              icon: const Icon(Icons.menu, color: Colors.black),
-              onPressed: () {
-                Scaffold.of(context).openDrawer();
-              },
-              tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
-            );
-          },
-        ),
+        title: const Text('Prime Scheduler App'),
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.arrow_back,
-              color: Colors.black,
-            ),
-            onPressed: _goToPreviousMonth,
-          ),
-          IconButton(
-            icon: const Icon(
-              Icons.arrow_forward,
-              color: Colors.black,
-            ),
-            onPressed: _goToNextMonth,
+            icon: widget.currentTheme == AppTheme.Light
+                ? Icon(Icons.wb_sunny) // Light mode icon
+                : Icon(Icons.nightlight_round), // Dark mode icon
+            onPressed: () {
+              // Toggle theme on icon press
+              widget.toggleTheme(widget.currentTheme == AppTheme.Light ? AppTheme.Dark : AppTheme.Light);
+            },
           ),
         ],
-        title: Text(
-          DateFormat.yMMMM().format(_selectedDate),
-          style: TextStyle(color: Colors.black),
-        ),
       ),
       body: Column(
         children: [
-          SizedBox(
-            height: 50,
-            child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 7,
-              ),
-              itemCount: daysOfWeek.length,
-              itemBuilder: (BuildContext context, int index) {
-                return Container(
-                  alignment: Alignment.center,
-                  child: Text(
-                    daysOfWeek[index],
-                    style: const TextStyle(
-                      fontSize: 15,
-                      color: Color(0xFFFD00F0F),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                );
-              },
+          Container(
+            margin: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_back),
+                  onPressed: _goToPreviousMonth,
+                ),
+                Text(
+                  DateFormat.yMMMM().format(_selectedDate),
+                  style: TextStyle(fontSize: 20.0),
+                ),
+                IconButton(
+                  icon: Icon(Icons.arrow_forward),
+                  onPressed: _goToNextMonth,
+                ),
+              ],
             ),
           ),
           Expanded(
-            flex: 4, // Adjust the flex value to make this container longer
             child: Container(
-              padding: const EdgeInsets.all(10.0), // Adjust padding to make the container larger
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    spreadRadius: 0.1,
-                    blurRadius: 7,
-                    offset: const Offset(0, 7.75),
+              padding: const EdgeInsets.all(8.0),
+              child: GridView.count(
+                crossAxisCount: 7,
+                children: _buildCalendar(),
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: _addEvent,
+            child: const Text('Add Event'),
+          ),
+          if (_highlightedDate != null)
+            Container(
+              height: 197,
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                children: [
+                  Text(
+                    'Events on ${DateFormat.yMMMd().format(_highlightedDate!)}:',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
+                  const SizedBox(height: 8.0),
+                  _selectedDateEvents.isNotEmpty
+                      ? SizedBox(
+                          height: 150, // Set a fixed height for the event list
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: _selectedDateEvents.length,
+                            itemBuilder: (context, index) {
+                              Event event = _selectedDateEvents[index];
+                              return Card(
+                                child: ListTile(
+                                  title: Text(event.title),
+                                  subtitle: Text(event.description),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(Icons.edit),
+                                        onPressed: () => _editEvent(event),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.delete),
+                                        onPressed: () => _showDeleteConfirmationDialog(event),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                      : const Text('No events'),
                 ],
               ),
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 7,
-                ),
-                itemCount: listOfDatesInMonth(_selectedDate).length + indexOfFirstDayMonth,
-                itemBuilder: (BuildContext context, int index) {
-                  DateTime currentDate = DateTime(
-                    _selectedDate.year,
-                    _selectedDate.month,
-                    index + 1 - indexOfFirstDayMonth,
-                  );
-                  List<Event>? events = _events[currentDate];
-
-                  return GestureDetector(
-                    onTap: () {
-                      if (index >= indexOfFirstDayMonth) {
-                        _onDateTap(currentDate);
-                      }
-                    },
-                    child: Container(
-                      alignment: Alignment.center,
-                      margin: const EdgeInsets.all(4.0), // Add margin around each date container
-                      decoration: BoxDecoration(
-                        color: currentDate == _highlightedDate ? Colors.red : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            index >= indexOfFirstDayMonth ? '${index + 1 - indexOfFirstDayMonth}' : '',
-                            style: TextStyle(
-                              color: currentDate == _highlightedDate ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color,
-                            ),
-                          ),
-                          if (events != null && events.isNotEmpty)
-                            Icon(
-                              Icons.circle,
-                              color: Colors.red,
-                              size: 5,
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
             ),
-          ),
-          SizedBox(height: 10), // Add space between calendar grid and button
-          Align(
-            alignment: Alignment.bottomRight,
-            child: FloatingActionButton(
-              onPressed: _addEvent,
-              tooltip: 'Add Event',
-              child: Icon(Icons.add),
-              backgroundColor: Colors.red[200],
-            ),
-          ),
-          Expanded(
-            flex: 3, // Adjust the flex value to allocate space for events list
-            child: _highlightedDate != null && _selectedDateEvents.isNotEmpty
-                ? ListView.builder(
-                    itemCount: _selectedDateEvents.length,
-                    itemBuilder: (context, index) {
-                      Event event = _selectedDateEvents[index];
-                      return ListTile(
-                        title: Text(event.title),
-                        subtitle: Text(event.description),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.edit),
-                              onPressed: () {
-                                _editEvent(event); // Call _editEvent here
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.delete),
-                              onPressed: () {
-                                _showDeleteConfirmationDialog(event);
-                              },
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  )
-                : Center(
-                    child: Text(
-                      _highlightedDate == null
-                          ? 'Select a date to add and view events'
-                          : 'No events for this date',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-          ),
         ],
       ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
-          children: <Widget>[
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.red[200],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.person, size: 40, color: Colors.black),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    userName,
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 18),
-                  ),
-                  SizedBox(height: 5),
-                  Text(
-                    userEmail,
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
+          children: [
+              UserAccountsDrawerHeader(
+                 accountName: Text(userName),
+                 accountEmail: Text(userEmail),
+                 currentAccountPicture: CircleAvatar(
+                 backgroundColor: Colors.white,
+                 child: Text(
+                  userName[0],
+                  style: TextStyle(fontSize: 40.0),
+                 ),
+                 ),
+                   decoration: BoxDecoration(
+                   color: _getUserAccountsDrawerHeaderColor(context),
+                 ),
+               ),
+
             ListTile(
               leading: Icon(Icons.person),
               title: Text('Edit Profile'),
-              onTap: _editProfile,
+              onTap: () {
+                _navigateToProfileScreen(context); // Navigate to edit profile screen
+              },
             ),
-            ExpansionTile(
-              leading: Icon(Icons.settings),
-              title: Text('Settings'),
-              children: [
-                ListTile(
-                  title: Text('Light Mode'),
-                  onTap: () {
-                    widget.toggleTheme(AppTheme.Light);
-                  },
-                ),
-                ListTile(
-                  title: Text('Dark Mode'),
-                  onTap: () {
-                    widget.toggleTheme(AppTheme.Dark);
-                  },
-                ),
-              ],
-            ),
+                              ListTile(
+              leading: Icon(Icons.event),
+              title: Text('Upcoming Events'),
+              onTap: () {
+              _navigateToUpcomingEvents(context);
+              }
+                  ),
             ListTile(
               leading: Icon(Icons.help),
               title: Text('Help & Support'),
-              onTap: _openHelpSupport,
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: Text('Help & Support'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Contact us at primescheduler@help.com'),
+                          Text('Visit our PrimeScheduler site for common questions.'),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          child: Text('Close'),
+                          onPressed: () {
+                            Navigator.of(context). pop();
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
             ),
             ListTile(
               leading: Icon(Icons.info),
               title: Text('About'),
-              onTap: _openAbout,
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: Text('About'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Prime Scheduler App'),
+                          Text('Version 1.0.0'),
+                          Text('Developed by Group 9'),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          child: Text('Close'),
+                          onPressed: () {
+                            Navigator.of(context). pop();
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
             ),
             ListTile(
-              leading: Icon(Icons.arrow_back),
+              leading: Icon(Icons.home),
               title: Text('Home'),
               onTap: () {
                 Navigator.pop(context); // Close the drawer
+                // Optionally, you can navigate to the calendar view here
               },
             ),
           ],
@@ -786,25 +810,104 @@ class _CalendarGridState extends State<CalendarGrid> {
     );
   }
 
-  List<String> daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-  List<DateTime> listOfDatesInMonth(DateTime selectedDate) {
-    DateTime firstDayOfMonth = DateTime(selectedDate.year, selectedDate.month, 1);
-    DateTime lastDayOfMonth =
-        DateTime(selectedDate.year, selectedDate.month + 1, 0);
-    int daysInMonth = lastDayOfMonth.day;
-
-    List<DateTime> dates = [];
-    for (int i = 0; i < daysInMonth; i++) {
-      dates.add(firstDayOfMonth.add(Duration(days: i)));
-    }
-
-    return dates;
+  void _navigateToProfileScreen(BuildContext context) {
+    Navigator.pop(context); // Close the drawer
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProfileScreen(
+          userName: userName,
+          userEmail: userEmail,
+          onUpdateProfile: _updateProfile,
+        ),
+      ),
+    );
   }
 
-  int getIndexOfFirstDayInMonth(DateTime selectedDate) {
-    // Adjust the calculation to handle Sunday as the first day of the week
-    int weekday = DateTime(selectedDate.year, selectedDate.month, 1).weekday;
-    return (weekday % 7); // This shifts Sunday (weekday == 7) to index 0
+  void _updateProfile(String newUserName, String newUserEmail) {
+    setState(() {
+      userName = newUserName;
+      userEmail = newUserEmail;
+    });
+  }
+}
+
+class ProfileScreen extends StatefulWidget {
+  final String userName;
+  final String userEmail;
+  final Function(String, String) onUpdateProfile;
+
+  const ProfileScreen({
+    Key? key,
+    required this.userName,
+    required this.userEmail,
+    required this.onUpdateProfile,
+  }) : super(key: key);
+
+  @override
+  _ProfileScreenState createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.userName);
+    _emailController = TextEditingController(text: widget.userEmail);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Edit Profile'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(labelText: 'Name'),
+            ),
+            TextField(
+              controller: _emailController,
+              decoration: InputDecoration(labelText: 'Email'),
+            ),
+            SizedBox(height: 16.0),
+            ElevatedButton(
+              onPressed: () {
+                _updateProfile();
+              },
+              child: Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _updateProfile() {
+    String newName = _nameController.text;
+    String newEmail = _emailController.text;
+    widget.onUpdateProfile(newName, newEmail);
+    Navigator.of(context).pop(); // Close the profile screen
+  }
+}
+
+class DateUtils {
+  static int getDaysInMonth(int year, int month) {
+    return DateTime(year, month + 1, 0).day;
   }
 }
