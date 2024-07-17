@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -26,17 +27,20 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Calendar App',
-      theme: _buildThemeData(AppTheme.Light), // Set initial light theme
-      darkTheme: _buildThemeData(AppTheme.Dark), // Set dark theme
-      themeMode: _currentTheme == AppTheme.Light ? ThemeMode.light : ThemeMode.dark,
-      debugShowCheckedModeBanner: false, // Remove debug banner
-      home: CalendarGrid(toggleTheme: _toggleTheme),
-    );
-  }
+@override
+Widget build(BuildContext context) {
+  return MaterialApp(
+    title: 'Calendar App',
+    theme: _buildThemeData(AppTheme.Light), // Set initial light theme
+    darkTheme: _buildThemeData(AppTheme.Dark), // Set dark theme
+    themeMode: _currentTheme == AppTheme.Light ? ThemeMode.light : ThemeMode.dark,
+    debugShowCheckedModeBanner: false, // Remove debug banner
+    home: CalendarGrid(
+      currentTheme: _currentTheme,
+      toggleTheme: _toggleTheme,
+    ),
+  );
+}
 
   ThemeData _buildThemeData(AppTheme themeMode) {
     switch (themeMode) {
@@ -77,15 +81,22 @@ class _MyAppState extends State<MyApp> {
 class Event {
   String title;
   String description;
+  DateTime date;
   String status;
 
-  Event(this.title, this.description, this.status);
+  Event(this.title, this.description, this.date, this.status);
 }
 
+
 class CalendarGrid extends StatefulWidget {
+  final AppTheme currentTheme;
   final Function(AppTheme) toggleTheme;
 
-  const CalendarGrid({Key? key, required this.toggleTheme}) : super(key: key);
+  const CalendarGrid({
+    Key? key,
+    required this.currentTheme,
+    required this.toggleTheme,
+  }) : super(key: key);
 
   @override
   _CalendarGridState createState() => _CalendarGridState();
@@ -105,6 +116,10 @@ class _CalendarGridState extends State<CalendarGrid> {
   void initState() {
     super.initState();
     _initializeSelectedIndex();
+  }
+
+  Color _getUserAccountsDrawerHeaderColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark ? Colors.red : Colors.red[200]!;
   }
 
   void _initializeSelectedIndex() {
@@ -128,83 +143,168 @@ class _CalendarGridState extends State<CalendarGrid> {
     });
   }
 
-  void _addEvent() {
-    if (_highlightedDate == null) return;
+void _addEvent() {
+  if (_highlightedDate == null) return;
 
-    TextEditingController titleController = TextEditingController();
-    TextEditingController descriptionController = TextEditingController();
-    String status = 'Busy'; // Default status to 'Busy'
+  TextEditingController titleController = TextEditingController();
+  TextEditingController descriptionController = TextEditingController();
+  String status = 'Busy'; // Default status to 'Busy'
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Add Event'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: InputDecoration(labelText: 'Title'),
-              ),
-              TextField(
-                controller: descriptionController,
-                decoration: InputDecoration(labelText: 'Description'),
-              ),
-              Row(
-                children: [
-                  Text('Status: '),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.circle,
-                        color: Colors.red,
-                        size: 10,
-                        
-                      ),
-                      SizedBox(width: 5),
-                      Text('Busy'),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () {
-                _showDiscardDialog(context);
-              },
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Add Event'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+             TextField(
+               controller: titleController,
+               decoration: InputDecoration(labelText: 'Title'),
+               maxLines: null, // Allow multiline input
+             ),
+             TextField(
+               controller: descriptionController,
+               decoration: InputDecoration(labelText: 'Description'),
+               maxLines: null, // Allow multiline input
+             ),
+
+            Row(
+              children: [
+                Text('Status: '),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.circle,
+                      color: Colors.red,
+                      size: 10,
+                    ),
+                    SizedBox(width: 5),
+                    Text('Busy'),
+                  ],
+                ),
+              ],
             ),
+            // Add DatePicker for selecting event date
             TextButton(
-              child: Text('Add'),
-              onPressed: () {
-                if (titleController.text.isEmpty || descriptionController.text.isEmpty) {
-                  _showWarningDialog(context);
-                } else {
+              onPressed: () async {
+                DateTime? pickedDate = await showDatePicker(
+                  context: context,
+                  initialDate: _highlightedDate ?? DateTime.now(),
+                  firstDate: DateTime.now(),
+                  lastDate: DateTime(DateTime.now().year + 5),
+                );
+                if (pickedDate != null) {
                   setState(() {
-                    _events.putIfAbsent(
-                      _highlightedDate!,
-                      () => [],
-                    ).add(
-                      Event(
-                        titleController.text,
-                        descriptionController.text,
-                        status,
-                      ),
-                    );
+                    _highlightedDate = pickedDate;
                   });
-                  Navigator.of(context).pop();
-                  _updateSelectedDateEvents();
                 }
               },
+              child: Text(
+                'Pick Date',
+                style: TextStyle(color: Colors.blue),
+              ),
             ),
           ],
-        );
-      },
-    );
+        ),
+        actions: [
+          TextButton(
+            child: Text('Cancel'),
+            onPressed: () {
+              _showDiscardDialog(context);
+            },
+          ),
+          TextButton(
+            child: Text('Add'),
+            onPressed: () {
+              if (titleController.text.isEmpty || descriptionController.text.isEmpty) {
+                _showWarningDialog(context);
+              } else {
+                setState(() {
+                  _events.putIfAbsent(
+                    _highlightedDate!,
+                    () => [],
+                  ).add(
+                    Event(
+                      titleController.text,
+                      descriptionController.text,
+                      _highlightedDate!,
+                      'Busy'                      
+                    ),
+                  );
+                });
+                Navigator.of(context).pop();
+                _updateSelectedDateEvents();
+              }
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
+  // Method to retrieve all upcoming events
+  List<Event> _getAllUpcomingEvents() {
+    List<Event> upcomingEvents = [];
+
+    _events.forEach((date, events) {
+      upcomingEvents.addAll(events);
+    });
+
+    // Sort events by date if events have date field
+    upcomingEvents.sort((a, b) => a.date.compareTo(b.date));
+
+    return upcomingEvents;
   }
+
+  // Method to navigate to Upcoming Events screen
+void _navigateToUpcomingEvents(BuildContext context) {
+  List<Event> upcomingEvents = _getAllUpcomingEvents();
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Upcoming Events'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (upcomingEvents.isNotEmpty)
+                ...upcomingEvents.map((event) {
+                  return ListTile(
+        title: Text(
+         event.title,
+         style: TextStyle(
+           color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
+           fontWeight: FontWeight.bold,
+                          ),
+                   ),
+           subtitle: Text(event.description),
+           trailing: Text(DateFormat.yMMMd().format(event.date)),
+);
+
+                }).toList(),
+              if (upcomingEvents.isEmpty)
+                Text('No Upcoming Events'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            child: Text('Close'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
+
 
   void _showDiscardDialog(BuildContext context) {
     showDialog(
@@ -429,7 +529,7 @@ List<Widget> _buildCalendar() {
         onTap: () => _onDateTap(date),
         child: Container(
           decoration: BoxDecoration(
-            color: isSelected ? Colors.red[200] : Colors.transparent,
+            color: isSelected ? Color.fromARGB(255, 202, 61, 61) : Colors.transparent,
             border: Border.all(
               color: Colors.grey.withOpacity(0.5),
               width: 1.0,
@@ -499,213 +599,277 @@ List<Widget> _buildCalendar() {
 }
 
 
-
-
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Prime Scheduler App'),
-        actions: [
-          PopupMenuButton<AppTheme>(
-            onSelected: widget.toggleTheme,
-            itemBuilder: (BuildContext context) {
-              return <PopupMenuEntry<AppTheme>>[
-                const PopupMenuItem<AppTheme>(
-                  value: AppTheme.Light,
-                  child: Text('Light Theme'),
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text('Prime Scheduler App'),
+      actions: [
+        IconButton(
+          icon: widget.currentTheme == AppTheme.Light
+              ? Icon(Icons.wb_sunny) // Light mode icon
+              : Icon(Icons.nightlight_round), // Dark mode icon
+          onPressed: () {
+            // Toggle theme on icon press
+            widget.toggleTheme(widget.currentTheme == AppTheme.Light ? AppTheme.Dark : AppTheme.Light);
+          },
+        ),
+      ],
+    ),
+    body: Stack(
+      children: [
+        Positioned(
+          bottom: -20,
+          height: 230,
+          left: 0,
+          right: 0,
+          child: ColorFiltered(
+            colorFilter: Theme.of(context).brightness == Brightness.dark
+                ? ColorFilter.matrix([
+                    -0.5, 0, 0, 0, 127.5,  // Red channel: partial invert and shift
+                    0, -0.5, 0, 0, 127.5, // Green channel: partial invert and shift
+                    0, 0, -0.5, 0, 127.5, // Blue channel: partial invert and shift
+                    0, 0, 0, 5, 0,        // Alpha channel: no change
+                  ])
+                : ColorFilter.mode(Colors.transparent, BlendMode.multiply),
+            child: Image.asset(
+              'web/asset/images/calendar-icon.png', // Adjust the path as necessary
+              height: MediaQuery.of(context).size.height * 0.3, // Adjust the height as needed
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+        Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.arrow_back),
+                    onPressed: _goToPreviousMonth,
+                  ),
+                  Text(
+                    DateFormat.yMMMM().format(_selectedDate),
+                    style: TextStyle(fontSize: 20.0),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.arrow_forward),
+                    onPressed: _goToNextMonth,
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(8.0),
+                child: GridView.count(
+                  crossAxisCount: 7,
+                  children: _buildCalendar(),
                 ),
-                const PopupMenuItem<AppTheme>(
-                  value: AppTheme.Dark,
-                  child: Text('Dark Theme'),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: _addEvent,
+              child: const Text('Add Event'),
+            ),
+            if (_highlightedDate != null)
+              Container(
+                height: 197,
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+                    Text(
+                      'Events on ${DateFormat.yMMMd().format(_highlightedDate!)}:',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8.0),
+                    _selectedDateEvents.isNotEmpty
+                        ? SizedBox(
+                            height: 150, // Set a fixed height for the event list
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: _selectedDateEvents.length,
+                              itemBuilder: (context, index) {
+                                Event event = _selectedDateEvents[index];
+                                return Card(
+                                  color: Theme.of(context).brightness == Brightness.light
+                                      ? Color.fromARGB(255, 255, 255, 255).withOpacity(0.5)
+                                      : Color.fromARGB(255, 70, 68, 68).withOpacity(0.5), // Color changes based on theme
+                                  child: ListTile(
+                                    title: Text(
+                                      event.title,
+                                      style: TextStyle(
+                                        color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    subtitle: Text(event.description),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: Icon(Icons.edit),
+                                          onPressed: () => _editEvent(event),
+                                        ),
+                                        IconButton(
+                                          icon: Icon(Icons.delete),
+                                          onPressed: () => _showDeleteConfirmationDialog(event),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        : const Text('No events'),
+                  ],
                 ),
-              ];
+              ),
+          ],
+        ),
+      ],
+    ),
+
+    drawer: Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          UserAccountsDrawerHeader(
+            accountName: Text(userName),
+            accountEmail: Text(userEmail),
+            currentAccountPicture: CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Text(
+                userName[0],
+                style: TextStyle(fontSize: 40.0),
+              ),
+            ),
+            decoration: BoxDecoration(
+              color: _getUserAccountsDrawerHeaderColor(context),
+            ),
+          ),
+          ListTile(
+            leading: Icon(Icons.person),
+            title: Text('Edit Profile'),
+            onTap: () {
+              _navigateToProfileScreen(context); // Navigate to edit profile screen
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.event),
+            title: Text('Upcoming Events'),
+            onTap: () {
+              _navigateToUpcomingEvents(context);
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.help),
+            title: Text('Help & Support'),
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text('Help & Support'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Need Assistance? ', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text('For immediate support, please contact us: '),
+                        Text('Email: primescheduler@help.com ', style: TextStyle(decoration: TextDecoration.underline)),
+                        Text('FAQs and More: Visit our Prime Scheduler Support Site for answers to common questions and more resources. '),
+                        Text("We are here to help ensure your experience with Prime Scheduler is smooth and efficient. Don't hesitate to reach out! ")
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        child: Text('Close'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.info),
+            title: Text('About'),
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text('About'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text.rich(
+                          TextSpan(
+                            text: 'App Name: ',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                            children: <TextSpan>[
+                              TextSpan(text: 'Prime Scheduler', style: TextStyle(fontWeight: FontWeight.normal)),
+                            ],
+                          ),
+                        ),
+                        Text.rich(
+                          TextSpan(
+                            text: 'Current Version: ',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                            children: <TextSpan>[
+                              TextSpan(text: '1.0.0', style: TextStyle(fontWeight: FontWeight.normal)),
+                            ],
+                          ),
+                        ),
+                        Text.rich(
+                          TextSpan(
+                            text: 'Development Team: ',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                            children: <TextSpan>[
+                              TextSpan(text: 'Group 9', style: TextStyle(fontWeight: FontWeight.normal)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        child: Text('Close'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.home),
+            title: Text('Home'),
+            onTap: () {
+              Navigator.pop(context); // Close the drawer
+              // Optionally, you can navigate to the calendar view here
             },
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Container(
-            margin: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.arrow_back),
-                  onPressed: _goToPreviousMonth,
-                ),
-                Text(
-                  DateFormat.yMMMM().format(_selectedDate),
-                  style: TextStyle(fontSize: 20.0),
-                ),
-                IconButton(
-                  icon: Icon(Icons.arrow_forward),
-                  onPressed: _goToNextMonth,
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(8.0),
-              child: GridView.count(
-                crossAxisCount: 7,
-                children: _buildCalendar(),
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: _addEvent,
-            child: const Text('Add Event'),
-          ),
-          if (_highlightedDate != null)
-            Container(
-              height: 197,
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                children: [
-                  Text(
-                    'Events on ${DateFormat.yMMMd().format(_highlightedDate!)}:',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8.0),
-                  _selectedDateEvents.isNotEmpty
-                      ? SizedBox(
-                          height: 150, // Set a fixed height for the event list
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: _selectedDateEvents.length,
-                            itemBuilder: (context, index) {
-                              Event event = _selectedDateEvents[index];
-                              return Card(
-                                child: ListTile(
-                                  title: Text(event.title),
-                                  subtitle: Text(event.description),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(Icons.edit),
-                                        onPressed: () => _editEvent(event),
-                                      ),
-                                      IconButton(
-                                        icon: Icon(Icons.delete),
-                                        onPressed: () => _showDeleteConfirmationDialog(event),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        )
-                      : const Text('No events'),
-                ],
-              ),
-            ),
-        ],
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            UserAccountsDrawerHeader(
-              accountName: Text(userName),
-              accountEmail: Text(userEmail),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Text(
-                  userName[0],
-                  style: TextStyle(fontSize: 40.0),
-                ),
-              ),
-              decoration: BoxDecoration(
-                color: Colors.red[200],
-              ),
-            ),
-            ListTile(
-              leading: Icon(Icons.person),
-              title: Text('Edit Profile'),
-              onTap: () {
-                _navigateToProfileScreen(context); // Navigate to edit profile screen
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.help),
-              title: Text('Help & Support'),
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: Text('Help & Support'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Contact us at primescheduler@help.com'),
-                          Text('Visit our PrimeScheduler site for common questions.'),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          child: Text('Close'),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.info),
-              title: Text('About'),
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: Text('About'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Prime Scheduler App'),
-                          Text('Version 1.0.0'),
-                          Text('Developed by Group 9'),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          child: Text('Close'),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.home),
-              title: Text('Home'),
-              onTap: () {
-                Navigator.pop(context); // Close the drawer
-                // Optionally, you can navigate to the calendar view here
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    ),
+  );
+}
+
+
+
 
   void _navigateToProfileScreen(BuildContext context) {
     Navigator.pop(context); // Close the drawer
@@ -762,6 +926,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _emailController.dispose();
     super.dispose();
   }
+  
 
   @override
   Widget build(BuildContext context) {
