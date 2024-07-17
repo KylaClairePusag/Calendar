@@ -1,10 +1,8 @@
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:firebase_core/firebase_core.dart';  // Import Firebase core
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();  // Initialize Firebase
+void main() {
   runApp(const MyApp());
 }
 
@@ -29,20 +27,20 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Calendar App',
-      theme: _buildThemeData(AppTheme.Light), // Set initial light theme
-      darkTheme: _buildThemeData(AppTheme.Dark), // Set dark theme
-      themeMode: _currentTheme == AppTheme.Light ? ThemeMode.light : ThemeMode.dark,
-      debugShowCheckedModeBanner: false, // Remove debug banner
-      home: CalendarGrid(
-        currentTheme: _currentTheme,
-        toggleTheme: _toggleTheme,
-      ),
-    );
-  }
+@override
+Widget build(BuildContext context) {
+  return MaterialApp(
+    title: 'Calendar App',
+    theme: _buildThemeData(AppTheme.Light), // Set initial light theme
+    darkTheme: _buildThemeData(AppTheme.Dark), // Set dark theme
+    themeMode: _currentTheme == AppTheme.Light ? ThemeMode.light : ThemeMode.dark,
+    debugShowCheckedModeBanner: false, // Remove debug banner
+    home: CalendarGrid(
+      currentTheme: _currentTheme,
+      toggleTheme: _toggleTheme,
+    ),
+  );
+}
 
   ThemeData _buildThemeData(AppTheme themeMode) {
     switch (themeMode) {
@@ -88,6 +86,7 @@ class Event {
 
   Event(this.title, this.description, this.date, this.status);
 }
+
 
 class CalendarGrid extends StatefulWidget {
   final AppTheme currentTheme;
@@ -471,7 +470,7 @@ void _navigateToUpcomingEvents(BuildContext context) {
 List<Widget> _buildCalendar() {
   final List<Widget> cells = [];
   final List<String> daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  final int daysInMonth = DateUtils.getDaysInMonth(_selectedDate.year, _selectedDate.month); // Fixed syntax error
+  final int daysInMonth = DateUtils.getDaysInMonth(_selectedDate.year, _selectedDate.month);
 
   // Calculate previous month's days
   DateTime previousMonthDate = DateTime(_selectedDate.year, _selectedDate.month - 1, 1);
@@ -530,7 +529,7 @@ List<Widget> _buildCalendar() {
         onTap: () => _onDateTap(date),
         child: Container(
           decoration: BoxDecoration(
-            color: isSelected ? Colors.red[200] : Colors.transparent,
+            color: isSelected ? Color.fromARGB(255, 202, 61, 61) : Colors.transparent,
             border: Border.all(
               color: Colors.grey.withOpacity(0.5),
               width: 1.0,
@@ -598,9 +597,6 @@ List<Widget> _buildCalendar() {
 
   return cells;
 }
-
-
-
 
 
   @override
@@ -697,6 +693,9 @@ List<Widget> _buildCalendar() {
                           ),
                         )
                       : const Text('No events'),
+                    Expanded(
+                  child: Image.asset('web/asset/images/calendar-icon.png'), 
+                  ),// Ensure the path is correct
                 ],
               ),
             ),
@@ -748,15 +747,18 @@ List<Widget> _buildCalendar() {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Contact us at primescheduler@help.com'),
-                          Text('Visit our PrimeScheduler site for common questions.'),
+                          Text('Need Assistance? ', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text('For immediate support, please contact us: '),
+                        Text('Email: primescheduler@help.com ', style: TextStyle(decoration: TextDecoration.underline)),
+                        Text('FAQs and More: Visit our Prime Scheduler Support Site for answers to common questions and more resources. '),
+                        Text("We are here to help ensure your experience with Prime Scheduler is smooth and efficient. Don't hesitate to reach out! ")
                         ],
                       ),
                       actions: [
                         TextButton(
                           child: Text('Close'),
                           onPressed: () {
-                            Navigator.of(context). pop();
+                            Navigator.of(context).pop();
                           },
                         ),
                       ],
@@ -778,16 +780,41 @@ List<Widget> _buildCalendar() {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Prime Scheduler App'),
-                          Text('Version 1.0.0'),
-                          Text('Developed by Group 9'),
+                          Text.rich(
+                  TextSpan(
+                    text: 'App Name: ',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                    children: <TextSpan>[
+                      TextSpan(text: 'Prime Scheduler', style: TextStyle(fontWeight: FontWeight.normal)),
+    ],
+  ),
+),
+Text.rich(
+  TextSpan(
+    text: 'Current Version: ',
+    style: TextStyle(fontWeight: FontWeight.bold),
+    children: <TextSpan>[
+      TextSpan(text: '1.0.0', style: TextStyle(fontWeight: FontWeight.normal)),
+    ],
+  ),
+),
+Text.rich(
+  TextSpan(
+    text: 'Development Team: ',
+    style: TextStyle(fontWeight: FontWeight.bold),
+    children: <TextSpan>[
+      TextSpan(text: 'Group 9', style: TextStyle(fontWeight: FontWeight.normal)),
+    ],
+  ),
+),
+
                         ],
                       ),
                       actions: [
                         TextButton(
                           child: Text('Close'),
                           onPressed: () {
-                            Navigator.of(context). pop();
+                            Navigator.of(context).pop();
                           },
                         ),
                       ],
@@ -862,7 +889,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose;
+    _emailController.dispose();
     super.dispose();
   }
 
