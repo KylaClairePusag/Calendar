@@ -811,11 +811,12 @@ drawer: Drawer(
           showDialog(
             context: context,
             builder: (BuildContext context) {
+              bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
               return AlertDialog(
                 title: Text(
                   'Help & Support',
                   style: GoogleFonts.roboto(
-                    color: Colors.black,
+                    color: isDarkMode ? Colors.white : Colors.black,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -824,35 +825,35 @@ drawer: Drawer(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Need Assistance? ',
+                      'Need Assistance?',
                       style: GoogleFonts.roboto(
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: isDarkMode ? Colors.white : Colors.black,
                       ),
                     ),
                     Text(
-                      'For immediate support, please contact us: ',
+                      'For immediate support, please contact us:',
                       style: GoogleFonts.roboto(
-                        color: Colors.black,
+                        color: isDarkMode ? Colors.white : Colors.black,
                       ),
                     ),
                     Text(
-                      'Email: primescheduler@help.com ',
+                      'Email: primescheduler@help.com',
                       style: GoogleFonts.roboto(
                         decoration: TextDecoration.underline,
-                        color: Colors.black,
+                        color: isDarkMode ? Colors.white : Colors.black,
                       ),
                     ),
                     Text(
-                      'FAQs and More: Visit our Prime Scheduler Support Site for answers to common questions and more resources. ',
+                      'FAQs and More: Visit our Prime Scheduler Support Site for answers to common questions and more resources.',
                       style: GoogleFonts.roboto(
-                        color: Colors.black,
+                        color: isDarkMode ? Colors.white : Colors.black,
                       ),
                     ),
                     Text(
-                      "We are here to help ensure your experience with Prime Scheduler is smooth and efficient. Don't hesitate to reach out! ",
+                      "We are here to help ensure your experience with Prime Scheduler is smooth and efficient. Don't hesitate to reach out!",
                       style: GoogleFonts.roboto(
-                        color: Colors.black,
+                        color: isDarkMode ? Colors.white : Colors.black,
                       ),
                     ),
                   ],
@@ -862,7 +863,7 @@ drawer: Drawer(
                     child: Text(
                       'Close',
                       style: GoogleFonts.roboto(
-                        color: Colors.black,
+                        color: isDarkMode ? Colors.white : Colors.black,
                       ),
                     ),
                     onPressed: () {
@@ -888,11 +889,12 @@ drawer: Drawer(
           showDialog(
             context: context,
             builder: (BuildContext context) {
+              bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
               return AlertDialog(
                 title: Text(
                   'About',
                   style: GoogleFonts.roboto(
-                    color: Colors.black,
+                    color: isDarkMode ? Colors.white : Colors.black,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -905,14 +907,14 @@ drawer: Drawer(
                         text: 'App Name: ',
                         style: GoogleFonts.roboto(
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: isDarkMode ? Colors.white : Colors.black,
                         ),
                         children: <TextSpan>[
                           TextSpan(
                             text: 'Prime Scheduler',
                             style: GoogleFonts.roboto(
                               fontWeight: FontWeight.normal,
-                              color: Colors.black,
+                              color: isDarkMode ? Colors.white : Colors.black,
                             ),
                           ),
                         ],
@@ -923,14 +925,14 @@ drawer: Drawer(
                         text: 'Current Version: ',
                         style: GoogleFonts.roboto(
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: isDarkMode ? Colors.white : Colors.black,
                         ),
                         children: <TextSpan>[
                           TextSpan(
                             text: '1.0.0',
                             style: GoogleFonts.roboto(
                               fontWeight: FontWeight.normal,
-                              color: Colors.black,
+                              color: isDarkMode ? Colors.white : Colors.black,
                             ),
                           ),
                         ],
@@ -941,14 +943,14 @@ drawer: Drawer(
                         text: 'Development Team: ',
                         style: GoogleFonts.roboto(
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: isDarkMode ? Colors.white : Colors.black,
                         ),
                         children: <TextSpan>[
                           TextSpan(
                             text: 'Group 9',
                             style: GoogleFonts.roboto(
                               fontWeight: FontWeight.normal,
-                              color: Colors.black,
+                              color: isDarkMode ? Colors.white : Colors.black,
                             ),
                           ),
                         ],
@@ -961,7 +963,7 @@ drawer: Drawer(
                     child: Text(
                       'Close',
                       style: GoogleFonts.roboto(
-                        color: Colors.black,
+                        color: isDarkMode ? Colors.white : Colors.black,
                       ),
                     ),
                     onPressed: () {
@@ -990,7 +992,7 @@ drawer: Drawer(
       ),
     ],
   ),
-  ),
+)
 );
 }
 
