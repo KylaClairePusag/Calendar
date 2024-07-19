@@ -1,14 +1,14 @@
-// Import necessary libraries
+// Import necessary for libraries
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// Main entry point of the application. The runApp function takes the given
+// for Main entry point of the application. The runApp function takes the given
 void main() {
   runApp(const MyApp());
 }
 
-// Enum to define the available themes: Light and Dark.
+// Enum to define the available themes: for Light and Dark.
 enum AppTheme {
   Light,
   Dark,
@@ -21,16 +21,18 @@ class MyApp extends StatefulWidget {
   _MyAppState createState() => _MyAppState();
 }
 
-// Variable to keep track of the current theme
+// Variable to keep track of the for current theme
 class _MyAppState extends State<MyApp> {
   AppTheme _currentTheme = AppTheme.Light;
 
-// Function to toggle the theme
+// Function to for toggle the theme
   void _toggleTheme(AppTheme theme) {
     setState(() {
       _currentTheme = theme;
     });
   }
+
+//overriding the build method of a StatefulWidget or StatelessWidget
 
 @override
 Widget build(BuildContext context) {
@@ -53,21 +55,21 @@ Widget build(BuildContext context) {
       case AppTheme.Light:
         return ThemeData(
           primarySwatch: Colors.red,
-          brightness: Brightness.light,
-          scaffoldBackgroundColor: Colors.white,
+          brightness: Brightness.light, //brightness of background
+          scaffoldBackgroundColor: Colors.white, //background color of date 
           cardColor: Colors.white,
           textTheme: TextTheme(
             bodyLarge: TextStyle(color: Colors.black),
           ),
-          appBarTheme: AppBarTheme(
-            backgroundColor: Colors.red[200],
+          appBarTheme: AppBarTheme(  
+            backgroundColor: Colors.red[200], //color of headers
             titleTextStyle: TextStyle(color: Colors.black, fontSize: 20),
-            iconTheme: IconThemeData(color: Colors.black),
+            iconTheme: IconThemeData(color: Colors.black), //color of toggle/text/drawer
           ),
         );
       case AppTheme.Dark:
         return ThemeData(
-          primarySwatch: Colors.red,
+          primarySwatch: Colors.red, // Dark Mode of AppTheme
           brightness: Brightness.dark,
           scaffoldBackgroundColor: Colors.black,
           cardColor: Colors.grey[900],
@@ -83,7 +85,7 @@ Widget build(BuildContext context) {
     }
   }
 }
-
+//Defining of Class for Adding Event
 class Event {
   String title;
   String description;
@@ -92,11 +94,11 @@ class Event {
 
   Event(this.title, this.description, this.date, this.status);
 }
-
+// CalendarGrid widget, which displays the calendar and handles theme toggling
 class CalendarGrid extends StatefulWidget {
   final AppTheme currentTheme;
   final Function(AppTheme) toggleTheme;
-
+// Constructor of CalendarGrid
   const CalendarGrid({
     Key? key,
     required this.currentTheme,
@@ -106,7 +108,7 @@ class CalendarGrid extends StatefulWidget {
   @override
   _CalendarGridState createState() => _CalendarGridState();
 }
-
+// State class for CalendarGrid
 class _CalendarGridState extends State<CalendarGrid> {
   DateTime _selectedDate = DateTime.now();
   DateTime? _highlightedDate;
