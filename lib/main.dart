@@ -1,10 +1,14 @@
+// Import necessary libraries
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 
+// Main entry point of the application. The runApp function takes the given
 void main() {
   runApp(const MyApp());
 }
 
+// Enum to define the available themes: Light and Dark.
 enum AppTheme {
   Light,
   Dark,
@@ -17,9 +21,11 @@ class MyApp extends StatefulWidget {
   _MyAppState createState() => _MyAppState();
 }
 
+// Variable to keep track of the current theme
 class _MyAppState extends State<MyApp> {
   AppTheme _currentTheme = AppTheme.Light;
 
+// Function to toggle the theme
   void _toggleTheme(AppTheme theme) {
     setState(() {
       _currentTheme = theme;
@@ -41,6 +47,7 @@ Widget build(BuildContext context) {
   );
 }
 
+// Function to build theme data based on the selected theme
   ThemeData _buildThemeData(AppTheme themeMode) {
     switch (themeMode) {
       case AppTheme.Light:
@@ -86,7 +93,6 @@ class Event {
   Event(this.title, this.description, this.date, this.status);
 }
 
-
 class CalendarGrid extends StatefulWidget {
   final AppTheme currentTheme;
   final Function(AppTheme) toggleTheme;
@@ -121,6 +127,7 @@ class _CalendarGridState extends State<CalendarGrid> {
     return Theme.of(context).brightness == Brightness.dark ? Colors.red : Colors.red[200]!;
   }
 
+// Set up stardard and accurate date and time 
   void _initializeSelectedIndex() {
     _highlightedDate = DateTime.now();
     indexOfFirstDayMonth = getIndexOfFirstDayInMonth(_selectedDate);
@@ -149,6 +156,7 @@ void _addEvent() {
   TextEditingController descriptionController = TextEditingController();
   String status = 'Busy'; // Default status to 'Busy'
 
+// Dialog for adding new events
   showDialog(
     context: context,
     builder: (BuildContext context) {
@@ -243,7 +251,7 @@ void _addEvent() {
   );
 }
 
-  // Method to retrieve all upcoming events
+// Method to retrieve all upcoming events
   List<Event> _getAllUpcomingEvents() {
     List<Event> upcomingEvents = [];
 
@@ -251,13 +259,13 @@ void _addEvent() {
       upcomingEvents.addAll(events);
     });
 
-    // Sort events by date if events have date field
+// Sort events by date if events have date field
     upcomingEvents.sort((a, b) => a.date.compareTo(b.date));
 
     return upcomingEvents;
   }
 
-  // Method to navigate to Upcoming Events screen
+// Method to navigate to Upcoming Events screen
 void _navigateToUpcomingEvents(BuildContext context) {
   List<Event> upcomingEvents = _getAllUpcomingEvents();
 
@@ -303,8 +311,7 @@ void _navigateToUpcomingEvents(BuildContext context) {
   );
 }
 
-
-
+// Dialog for event confirmation
   void _showDiscardDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -332,6 +339,7 @@ void _navigateToUpcomingEvents(BuildContext context) {
     );
   }
 
+// Dialog for ensuring all necessary fields is filled-up
   void _showWarningDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -359,6 +367,7 @@ void _navigateToUpcomingEvents(BuildContext context) {
         TextEditingController(text: event.description);
     String status = event.status;
 
+// Dialog for editing the added event
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -418,6 +427,7 @@ void _navigateToUpcomingEvents(BuildContext context) {
     );
   }
 
+// Dialog for confirmation to delete event
   void _showDeleteConfirmationDialog(Event event) {
     showDialog(
       context: context,
@@ -471,13 +481,13 @@ List<Widget> _buildCalendar() {
   final List<String> daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   final int daysInMonth = DateUtils.getDaysInMonth(_selectedDate.year, _selectedDate.month);
 
-  // Calculate previous month's days
+// Calculate previous month's days
   DateTime previousMonthDate = DateTime(_selectedDate.year, _selectedDate.month - 1, 1);
   int daysInPreviousMonth = DateUtils.getDaysInMonth(previousMonthDate.year, previousMonthDate.month);
   int indexOfFirstDayMonth = getIndexOfFirstDayInMonth(_selectedDate);
   int remainingDaysInPreviousMonth = indexOfFirstDayMonth;
 
-  // Add headers for days of the week
+// Add headers for days of the week
   for (int i = 0; i < daysOfWeek.length; i++) {
     cells.add(
       Container(
@@ -512,7 +522,7 @@ List<Widget> _buildCalendar() {
     );
   }
 
-  // Add cells for each day of the current month
+// Add cells for each day of the current month
   for (int day = 1; day <= daysInMonth; day++) {
     final date = DateTime(_selectedDate.year, _selectedDate.month, day);
     final bool isToday = date.year == DateTime.now().year &&
@@ -520,7 +530,7 @@ List<Widget> _buildCalendar() {
         date.day == DateTime.now().day;
     final bool isSelected = date == _highlightedDate;
 
-    // Determine if the date has events
+// Determine if the date has events
     bool hasEvents = _events.containsKey(date) && _events[date]!.isNotEmpty;
 
     cells.add(
@@ -597,247 +607,405 @@ List<Widget> _buildCalendar() {
   return cells;
 }
 
-
-
-
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Prime Scheduler App'),
-        actions: [
-          IconButton(
-            icon: widget.currentTheme == AppTheme.Light
-                ? Icon(Icons.wb_sunny) // Light mode icon
-                : Icon(Icons.nightlight_round), // Dark mode icon
-            onPressed: () {
-              // Toggle theme on icon press
-              widget.toggleTheme(widget.currentTheme == AppTheme.Light ? AppTheme.Dark : AppTheme.Light);
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Container(
-            margin: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.arrow_back),
-                  onPressed: _goToPreviousMonth,
-                ),
-                Text(
-                  DateFormat.yMMMM().format(_selectedDate),
-                  style: TextStyle(fontSize: 20.0),
-                ),
-                IconButton(
-                  icon: Icon(Icons.arrow_forward),
-                  onPressed: _goToNextMonth,
-                ),
-              ],
+// AppBar of the calendar 
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text('Prime Scheduler App'),
+      actions: [
+        IconButton(
+          icon: widget.currentTheme == AppTheme.Light
+              ? Icon(Icons.wb_sunny) // Light mode icon
+              : Icon(Icons.nightlight_round), // Dark mode icon
+          onPressed: () {
+            // Toggle theme on icon press
+            widget.toggleTheme(widget.currentTheme == AppTheme.Light ? AppTheme.Dark : AppTheme.Light);
+          },
+        ),
+      ],
+    ),
+    body: Stack(
+      children: [
+        Positioned(
+          bottom: -20,
+          height: 230,
+          left: 0,
+          right: 0,
+          child: ColorFiltered(
+            colorFilter: Theme.of(context).brightness == Brightness.dark
+                ? ColorFilter.matrix([
+                    -0.5, 0, 0, 0, 127.5,  // Red channel: partial invert and shift
+                    0, -0.5, 0, 0, 127.5, // Green channel: partial invert and shift
+                    0, 0, -0.5, 0, 127.5, // Blue channel: partial invert and shift
+                    0, 0, 0, 5, 0,        // Alpha channel: no change
+                  ])
+                : ColorFilter.mode(Colors.transparent, BlendMode.multiply),
+            child: Image.asset(
+              'web/asset/images/calendar-icon.png', // Adjust the path as necessary
+              height: MediaQuery.of(context).size.height * 0.3, // Adjust the height as needed
+              width: double.infinity,
+              fit: BoxFit.cover,
             ),
           ),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(8.0),
-              child: GridView.count(
-                crossAxisCount: 7,
-                children: _buildCalendar(),
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: _addEvent,
-            child: const Text('Add Event'),
-          ),
-          if (_highlightedDate != null)
+        ),
+        Column(
+          children: [
             Container(
-              height: 197,
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
+              margin: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Events on ${DateFormat.yMMMd().format(_highlightedDate!)}:',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  IconButton(
+                    icon: Icon(Icons.arrow_back),
+                    onPressed: _goToPreviousMonth,
                   ),
-                  const SizedBox(height: 8.0),
-                  _selectedDateEvents.isNotEmpty
-                      ? SizedBox(
-                          height: 150, // Set a fixed height for the event list
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: _selectedDateEvents.length,
-                            itemBuilder: (context, index) {
-                              Event event = _selectedDateEvents[index];
-                              return Card(
-                                child: ListTile(
-                                  title: Text(event.title),
-                                  subtitle: Text(event.description),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(Icons.edit),
-                                        onPressed: () => _editEvent(event),
-                                      ),
-                                      IconButton(
-                                        icon: Icon(Icons.delete),
-                                        onPressed: () => _showDeleteConfirmationDialog(event),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        )
-                      : const Text('No events'),
+                  Text(
+                    DateFormat.yMMMM().format(_selectedDate),
+                    style: TextStyle(fontSize: 20.0),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.arrow_forward),
+                    onPressed: _goToNextMonth,
+                  ),
                 ],
               ),
             ),
-        ],
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-              UserAccountsDrawerHeader(
-                 accountName: Text(userName),
-                 accountEmail: Text(userEmail),
-                 currentAccountPicture: CircleAvatar(
-                 backgroundColor: Colors.white,
-                 child: Text(
-                  userName[0],
-                  style: TextStyle(fontSize: 40.0),
-                 ),
-                 ),
-                   decoration: BoxDecoration(
-                   color: _getUserAccountsDrawerHeaderColor(context),
-                 ),
-               ),
-
-            ListTile(
-              leading: Icon(Icons.person),
-              title: Text('Edit Profile'),
-              onTap: () {
-                _navigateToProfileScreen(context); // Navigate to edit profile screen
-              },
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(8.0),
+                child: GridView.count(
+                  crossAxisCount: 7,
+                  children: _buildCalendar(),
+                ),
+              ),
             ),
-                              ListTile(
-              leading: Icon(Icons.event),
-              title: Text('Upcoming Events'),
-              onTap: () {
-              _navigateToUpcomingEvents(context);
-              }
-                  ),
-            ListTile(
-              leading: Icon(Icons.help),
-              title: Text('Help & Support'),
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: Text('Help & Support'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Need Assistance? ', style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text('For immediate support, please contact us: '),
-                        Text('Email: primescheduler@help.com ', style: TextStyle(decoration: TextDecoration.underline)),
-                        Text('FAQs and More: Visit our Prime Scheduler Support Site for answers to common questions and more resources. '),
-                        Text("We are here to help ensure your experience with Prime Scheduler is smooth and efficient. Don't hesitate to reach out! ")
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          child: Text('Close'),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
+            ElevatedButton(
+              onPressed: _addEvent,
+              child: const Text('Add Event'),
             ),
-            ListTile(
-              leading: Icon(Icons.info),
-              title: Text('About'),
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: Text('About'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text.rich(
-  TextSpan(
-    text: 'App Name: ',
-    style: TextStyle(fontWeight: FontWeight.bold),
-    children: <TextSpan>[
-      TextSpan(text: 'Prime Scheduler', style: TextStyle(fontWeight: FontWeight.normal)),
-    ],
-  ),
-),
-Text.rich(
-  TextSpan(
-    text: 'Current Version: ',
-    style: TextStyle(fontWeight: FontWeight.bold),
-    children: <TextSpan>[
-      TextSpan(text: '1.0.0', style: TextStyle(fontWeight: FontWeight.normal)),
-    ],
-  ),
-),
-Text.rich(
-  TextSpan(
-    text: 'Development Team: ',
-    style: TextStyle(fontWeight: FontWeight.bold),
-    children: <TextSpan>[
-      TextSpan(text: 'Group 9', style: TextStyle(fontWeight: FontWeight.normal)),
-    ],
-  ),
-),
-
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          child: Text('Close'),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.home),
-              title: Text('Home'),
-              onTap: () {
-                Navigator.pop(context); // Close the drawer
-                // Optionally, you can navigate to the calendar view here
-              },
-            ),
+            if (_highlightedDate != null)
+              Container(
+                height: 197,
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+                    Text(
+                      'Events on ${DateFormat.yMMMd().format(_highlightedDate!)}:',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8.0),
+                    _selectedDateEvents.isNotEmpty
+                        ? SizedBox(
+                            height: 150, // Set a fixed height for the event list
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: _selectedDateEvents.length,
+                              itemBuilder: (context, index) {
+                                Event event = _selectedDateEvents[index];
+                                return Card(
+                                  color: Theme.of(context).brightness == Brightness.light
+                                      ? Color.fromARGB(255, 255, 255, 255).withOpacity(0.9)
+                                      : Color.fromARGB(255, 70, 68, 68).withOpacity(0.5), // Color changes based on theme
+                                  child: ListTile(
+                                    title: Text(
+                                      event.title,
+                                      style: TextStyle(
+                                        color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                    subtitle: Text(event.description),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: Icon(Icons.edit),
+                                          onPressed: () => _editEvent(event),
+                                        ),
+                                        IconButton(
+                                          icon: Icon(Icons.delete),
+                                          onPressed: () => _showDeleteConfirmationDialog(event),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        : const Text('No events'),
+                  ],
+                ),
+              ),
           ],
         ),
-      ),
-    );
-  }
+      ],
+    ),
 
+// Drawer/ListTile for the buttons
+drawer: Drawer(
+  child: ListView(
+    padding: EdgeInsets.zero,
+    children: [
+      UserAccountsDrawerHeader(
+        accountName: Text(
+          userName,
+          style: GoogleFonts.roboto(
+            fontWeight: FontWeight.bold,
+            color: Colors.white, // Adjust as needed
+          ),
+        ),
+        accountEmail: Text(
+          userEmail,
+          style: GoogleFonts.roboto(
+            color: Colors.white, // Adjust as needed
+          ),
+        ),
+        currentAccountPicture: CircleAvatar(
+          backgroundColor: Colors.white,
+          child: Text(
+            userName[0],
+            style: GoogleFonts.roboto(
+              fontSize: 40.0,
+              color: Colors.black, // Adjust as needed
+            ),
+          ),
+        ),
+        decoration: BoxDecoration(
+          color: _getUserAccountsDrawerHeaderColor(context),
+        ),
+      ),
+      ListTile(
+        leading: Icon(Icons.person),
+        title: Text(
+          'Edit Profile',
+          style: GoogleFonts.roboto(
+            color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        onTap: () {
+          _navigateToProfileScreen(context); // Navigate to edit profile screen
+        },
+      ),
+      ListTile(
+        leading: Icon(Icons.event),
+        title: Text(
+          'Upcoming Events',
+          style: GoogleFonts.roboto(
+            color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        onTap: () {
+          _navigateToUpcomingEvents(context);
+        },
+      ),
+      ListTile(
+        leading: Icon(Icons.help),
+        title: Text(
+          'Help & Support',
+          style: GoogleFonts.roboto(
+            color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+              return AlertDialog(
+                title: Text(
+                  'Help & Support',
+                  style: GoogleFonts.roboto(
+                    color: isDarkMode ? Colors.white : Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Need Assistance?',
+                      style: GoogleFonts.roboto(
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    Text(
+                      'For immediate support, please contact us:',
+                      style: GoogleFonts.roboto(
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    Text(
+                      'Email: primescheduler@help.com',
+                      style: GoogleFonts.roboto(
+                        decoration: TextDecoration.underline,
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    SizedBox(height: 8), // Space added here
+                    Text(
+                      'FAQs and More: Visit our Prime Scheduler Support Site for answers to common questions and more resources.',
+                      style: GoogleFonts.roboto(
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    SizedBox(height: 8), // Space added here
+                    Text(
+                      "We are here to help ensure your experience with Prime Scheduler is smooth and efficient. Don't hesitate to reach out!",
+                      style: GoogleFonts.roboto(
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    child: Text(
+                      'Close',
+                      style: GoogleFonts.roboto(
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+      ListTile(
+        leading: Icon(Icons.info),
+        title: Text(
+          'About',
+          style: GoogleFonts.roboto(
+            color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+              return AlertDialog(
+                title: Text(
+                  'About',
+                  style: GoogleFonts.roboto(
+                    color: isDarkMode ? Colors.white : Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text.rich(
+                      TextSpan(
+                        text: 'App Name: ',
+                        style: GoogleFonts.roboto(
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black,
+                        ),
+                        children: <TextSpan>[
+                          TextSpan(
+                            text: 'Prime Scheduler',
+                            style: GoogleFonts.roboto(
+                              fontWeight: FontWeight.normal,
+                              color: isDarkMode ? Colors.white : Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text.rich(
+                      TextSpan(
+                        text: 'Current Version: ',
+                        style: GoogleFonts.roboto(
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black,
+                        ),
+                        children: <TextSpan>[
+                          TextSpan(
+                            text: '1.0.0',
+                            style: GoogleFonts.roboto(
+                              fontWeight: FontWeight.normal,
+                              color: isDarkMode ? Colors.white : Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text.rich(
+                      TextSpan(
+                        text: 'Development Team: ',
+                        style: GoogleFonts.roboto(
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black,
+                        ),
+                        children: <TextSpan>[
+                          TextSpan(
+                            text: 'Group 9',
+                            style: GoogleFonts.roboto(
+                              fontWeight: FontWeight.normal,
+                              color: isDarkMode ? Colors.white : Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    child: Text(
+                      'Close',
+                      style: GoogleFonts.roboto(
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+      ListTile(
+        leading: Icon(Icons.home),
+        title: Text(
+          'Home',
+          style: GoogleFonts.roboto(
+            color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        onTap: () {
+          Navigator.pop(context); // Close the drawer
+          // Optionally, you can navigate to the calendar view here
+        },
+      ),
+    ],
+  ),
+)
+);
+}
+
+// Close the drawer
   void _navigateToProfileScreen(BuildContext context) {
-    Navigator.pop(context); // Close the drawer
+    Navigator.pop(context); 
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -858,6 +1026,7 @@ Text.rich(
   }
 }
 
+// Create a class for updating the user information
 class ProfileScreen extends StatefulWidget {
   final String userName;
   final String userEmail;
@@ -891,7 +1060,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _emailController.dispose();
     super.dispose();
   }
-
+  
+// Dialog to edit user information
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -924,6 +1094,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+// Updating user information
   void _updateProfile() {
     String newName = _nameController.text;
     String newEmail = _emailController.text;
