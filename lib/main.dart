@@ -844,12 +844,14 @@ drawer: Drawer(
                         color: isDarkMode ? Colors.white : Colors.black,
                       ),
                     ),
+                    SizedBox(height: 8), // Space added here
                     Text(
                       'FAQs and More: Visit our Prime Scheduler Support Site for answers to common questions and more resources.',
                       style: GoogleFonts.roboto(
                         color: isDarkMode ? Colors.white : Colors.black,
                       ),
                     ),
+                    SizedBox(height: 8), // Space added here
                     Text(
                       "We are here to help ensure your experience with Prime Scheduler is smooth and efficient. Don't hesitate to reach out!",
                       style: GoogleFonts.roboto(
